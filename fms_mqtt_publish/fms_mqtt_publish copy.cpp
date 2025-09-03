@@ -219,29 +219,6 @@ int main(int argc, char *argv[])
               ]
             })";
 
-            // std::string payload = R"({
-            //     "headerId": "header_test",
-            //     "timestamp": 1650000000,
-            //     "orderId": "order_test_1",
-            //     "nodes": [
-            //         {"nodeId": "N1", "sequenceId": 0, "nodePosition": {"x":0.0, "y":0.0}},
-            //         {"nodeId": "N2", "sequenceId": 1, "nodePosition": {"x":111.0, "y":0.0}},
-            //         {"nodeId": "N3", "sequenceId": 2, "nodePosition": {"x":100.0, "y":100.0}},
-            //         {"nodeId": "N4", "sequenceId": 3, "nodePosition": {"x":0.0, "y":100.0}},
-            //         {"nodeId": "N5", "sequenceId": 4, "nodePosition": {"x":0.0, "y":0.0}}
-            //     ],
-            //     "edges": [
-            //         {"edgeId": "E1", "sequenceId": 0, "startNodeId": "N1", "endNodeId": "N2", "maxSpeed": 1.0},
-            //         {"edgeId": "E2", "sequenceId": 1, "startNodeId": "N2", "endNodeId": "N3", "maxSpeed": 4.0,
-            //         "turnCenter": {"x": 70.0, "y": 30.0}},
-            //         {"edgeId": "E3", "sequenceId": 2, "startNodeId": "N3", "endNodeId": "N4", "maxSpeed": 4.0,
-            //         "turnCenter": {"x": 70.0, "y": 70.0}},
-            //         {"edgeId": "E4", "sequenceId": 3, "startNodeId": "N4", "endNodeId": "N5", "maxSpeed": 1.0,
-            //         "turnCenter": {"x": 30.0, "y": 70.0}}
-            //     ]
-            //     })";
-
-        // auto msg = mqtt::make_message(ORDER_TOPIC, payload);
         auto msg0 = mqtt::make_message(ORDER_TOPIC_AMR0, payload0);
         msg0->set_qos(QOS);
         auto msg1 = mqtt::make_message(ORDER_TOPIC_AMR1, payload1);

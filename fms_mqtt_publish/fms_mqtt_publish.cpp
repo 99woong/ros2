@@ -1,499 +1,201 @@
-#include <iostream>
-#include <string>
-#include <vector>
-#include <mqtt/async_client.h>
-#include <algorithm> 
-
 #include <rclcpp/rclcpp.hpp>
-#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <visualization_msgs/msg/marker.hpp>
-#include <nlohmann/json.hpp>
-#include <tf2/LinearMath/Quaternion.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <geometry_msgs/msg/point.hpp>
+
+#include <cmath>
+#include <tuple>
 #include <fstream>
-#include <sstream>
+#include <iostream>
+#include <nlohmann/json.hpp>
 
 using json = nlohmann::json;
 
-#define AMR_SIZE_X  3.0  
-#define AMR_SIZE_Y  2.0 
-#define AMR_SIZE_Z  2.0 
-
-#define AMR_COUNT 5
-
-const std::string SERVER_ADDRESS("tcp://localhost:1883");
-const std::string CLIENT_ID("fms_client");
-
-const int QOS = 1;
-
-const std::string VISUALIZATION_TOPICS[AMR_COUNT] = {
-    "vda5050/agvs/amr_0/visualization",
-    "vda5050/agvs/amr_1/visualization",
-    "vda5050/agvs/amr_2/visualization",
-    "vda5050/agvs/amr_3/visualization",
-    "vda5050/agvs/amr_4/visualization"
+struct Point {
+    double x, y;
 };
 
-const std::string ORDER_TOPICS[AMR_COUNT] = {
-    "vda5050/agvs/amr_0/order",
-    "vda5050/agvs/amr_1/order",
-    "vda5050/agvs/amr_2/order",
-    "vda5050/agvs/amr_3/order",
-    "vda5050/agvs/amr_4/order"
+struct Node_ {
+    std::string id;
+    Point pos;
 };
 
-const std::string FACTS_TOPIC = "vda5050/agvs/amr_0/instantActions";
-
-const std::string FACTSHEET_REQUEST_INSTANT_ACTION = R"({
-    "headerId": "factsheet_request_1",
-    "timestamp": 1650000000,
-    "version": "2.1.0",
-    "manufacturer": "FMSManufacturer",
-    "serialNumber": "fms_001",
-    "instantActions": [
-        {
-            "actionType": "factsheetRequest",
-            "actionId": "req_001"
-        }
-    ]
-})";
-
-struct NodeInfo 
-{
-    std::string nodeId;
-    int sequenceId;
-    double x;
-    double y;
-    double theta;
-
-    NodeInfo() : sequenceId(0), x(0), y(0), theta(0) {}
+struct Edge {
+    std::string id;
+    Node_ start;
+    Node_ end;
 };
 
-bool initialized = false;
-
-void publishOrderEdgesAsLines(const std::string& payload,
-                             rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub,
-                             rclcpp::Node::SharedPtr node)
-{
-    static visualization_msgs::msg::Marker line_marker;
-
-    if(!initialized)
-    {
-        line_marker.header.frame_id = "map";
-        // line_marker.header.stamp = node->get_clock()->now();
-        line_marker.ns = "fms_order_edges";
-        line_marker.id = 0;
-        line_marker.type = visualization_msgs::msg::Marker::LINE_LIST;
-        line_marker.action = visualization_msgs::msg::Marker::ADD;
-
-        line_marker.scale.x = 0.5;
-        line_marker.color.r = 0.5;
-        line_marker.color.g = 0.5;
-        line_marker.color.b = 1.0;
-        line_marker.color.a = 1.0;
-        
-        initialized = true;
-        std::cout << "initialized!!! " << std::endl;
-    }        
-
-    auto j = nlohmann::json::parse(payload);
-
-    if (!j.contains("nodes") || !j.contains("edges"))
-    {
-        std::cerr << "Missing nodes or edges in payload" << std::endl;
-        return;
-    }
-
-    struct NodeInfo {
-        std::string nodeId;
-        double x, y, theta;
-    };
-
-    std::unordered_map<std::string, NodeInfo> node_map;
-    for (const auto& node : j["nodes"])
-    {
-        NodeInfo n;
-        n.nodeId = node.value("nodeId", "");
-        if (node.contains("nodePosition"))
-        {
-            n.x = node["nodePosition"].value("x", 0.0);
-            n.y = node["nodePosition"].value("y", 0.0);
-            n.theta = node["nodePosition"].value("theta", 0.0);
-        }
-        node_map[n.nodeId] = n;
-    }
-
-    // visualization_msgs::msg::Marker line_marker;
-
-    line_marker.header.stamp = node->get_clock()->now();    
-
-    for (const auto& edge : j["edges"])
-    {
-        std::string start_id = edge.value("startNodeId", "");
-        std::string end_id = edge.value("endNodeId", "");
-        if (node_map.find(start_id) == node_map.end() || node_map.find(end_id) == node_map.end())
-            continue;
-
-        const NodeInfo& start_node = node_map[start_id];
-        const NodeInfo& end_node = node_map[end_id];
-
-        geometry_msgs::msg::Point p_start, p_end;
-        p_start.x = start_node.x;
-        p_start.y = start_node.y;
-        p_start.z = 0.0;
-
-        p_end.x = end_node.x;
-        p_end.y = end_node.y;
-        p_end.z = 0.0;
-
-        std::cout << "start_node.x : " << start_node.x << " " << "start_node.y : " << start_node.y << 
-            "end_node.x : " << end_node.x << " " << "end_node.y : " << end_node.y << std::endl;
-
-        line_marker.points.push_back(p_start);
-        line_marker.points.push_back(p_end);
-    }
-
-    marker_pub->publish(line_marker);
+Point normalize(const Point &p) {
+    double len = std::hypot(p.x, p.y);
+    return {p.x / len, p.y / len};
 }
 
-// MQTT 콜백 핸들러 클래스 정의 - 다수 AMR 지원
-class Callback : public virtual mqtt::callback
+std::tuple<Point, Point, Point> computeArcPoints(
+    const Edge &edge1, const Edge &edge2, double wheelbase, double max_steer_deg)
 {
+    double delta = max_steer_deg * M_PI / 180.0;
+    double Rmin = wheelbase / std::tan(delta);
+
+    // 교차점 (코너점)
+    Point P = edge1.end.pos;
+
+    // edge1 방향 (단위벡터)
+    Point dir1 = normalize({edge1.end.pos.x - edge1.start.pos.x,
+                            edge1.end.pos.y - edge1.start.pos.y});
+    // edge2 방향 (단위벡터)
+    Point dir2 = normalize({edge2.end.pos.x - edge2.start.pos.x,
+                            edge2.end.pos.y - edge2.start.pos.y});
+
+    // 시작점 (edge1 직선 위)
+    Point S = {P.x - dir1.x * Rmin, P.y - dir1.y * Rmin};
+    // 끝점 (edge2 직선 위)
+    Point E = {P.x + dir2.x * Rmin, P.y + dir2.y * Rmin};
+
+    // 각각의 법선벡터 (좌회전 기준)
+    Point n1{-dir1.y, dir1.x};
+    Point n2{-dir2.y, dir2.x};
+
+    // 직선 S + λ*n1 과 E + μ*n2 의 교차점 → 중심점 C
+    double A1 = n1.x, B1 = -n2.x;
+    double C1 = E.x - S.x;
+    double A2 = n1.y, B2 = -n2.y;
+    double C2 = E.y - S.y;
+
+    double det = A1 * B2 - A2 * B1;
+    if (std::fabs(det) < 1e-9) {
+        // 특수 케이스 (fail-safe)
+        return {S, E, P};
+    }
+
+    double lambda = (C1 * B2 - C2 * B1) / det;
+    Point C = {S.x + lambda * n1.x, S.y + lambda * n1.y};
+
+    return {S, E, C};
+}
+
+class ArcPublisher : public rclcpp::Node {
 public:
-    Callback(rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_pub,
-             const std::vector<rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr>& marker_pubs,
-             rclcpp::Node::SharedPtr node)
-        : pose_pub_(pose_pub), marker_pubs_(marker_pubs), node_(node), factsheet_received_(false)
-    {
-        for (size_t i = 0; i < marker_pubs_.size(); ++i)
-        {
-            visualization_msgs::msg::Marker marker_msg;
-            marker_msg.header.frame_id = "map";
-            marker_msg.ns = "amr_model_" + std::to_string(i);
-            marker_msg.id = 0;
-            marker_msg.type = visualization_msgs::msg::Marker::CUBE;
-            marker_msg.action = visualization_msgs::msg::Marker::ADD;
-            marker_msg.color.a = 0.8; // 투명도
-            marker_msg.color.r = 0.0;
-            marker_msg.color.g = 1.0;
-            marker_msg.color.b = 0.0;
-            initialized_markers_.push_back(marker_msg);
-        }
-    }
-
-
-    void message_arrived(mqtt::const_message_ptr msg) override
-    {
-        std::string topic = msg->get_topic();
-        std::string payload = msg->to_string();
-
-        for (size_t i = 0; i < AMR_COUNT; ++i)
-        {
-            // std::cout << "recv visualzation : " << i  << " " << payload <<  std::endl;
-
-            if (topic == VISUALIZATION_TOPICS[i])
-            {
-                // std::cout << "[MQTT] Visualization message arrived for amr_" << i << std::endl;
-                try
-                {
-                    auto j = json::parse(payload);
-                    auto pose_json = j.at("pose");
-                    double x = pose_json.at("x").get<double>();
-                    double y = pose_json.at("y").get<double>();
-                    double theta = pose_json.at("theta").get<double>();
-
-                    geometry_msgs::msg::PoseStamped pose;
-                    pose.header.stamp = node_->get_clock()->now();
-                    pose.header.frame_id = "map";
-                    pose.pose.position.x = x;
-                    pose.pose.position.y = y;
-                    pose.pose.position.z = 1.0;
-
-                    tf2::Quaternion q;
-                    q.setRPY(0, 0, theta);
-                    pose.pose.orientation = tf2::toMsg(q);
-
-                    pose_pub_->publish(pose);
-
-                    auto& marker_msg = initialized_markers_[i];
-                    marker_msg.header.stamp = node_->get_clock()->now();
-                    marker_msg.pose = pose.pose;
-
-                    marker_msg.scale.x = AMR_SIZE_X;
-                    marker_msg.scale.y = AMR_SIZE_Y;
-                    marker_msg.scale.z = AMR_SIZE_Z;
-
-                    marker_pubs_[i]->publish(marker_msg);
-                }
-                catch (...)
-                {
-                    std::cerr << "[ERROR] Failed to parse visualization json for AMR " << i << std::endl;
-                }
-            }
-        }
-
-        if (topic == FACTS_TOPIC && !factsheet_received_)
-        {
-            std::cout << "[MQTT] Factsheet message arrived\n";
-            try
-            {
-                auto j = json::parse(payload);
-                auto physical_params = j.at("physicalParameters");
-                double width = physical_params.at("width").get<double>();
-                double length = physical_params.at("length").get<double>();
-                double height = physical_params.at("heightMax").get<double>();
-
-                auto& marker_msg = initialized_markers_[0]; // amr_0 에 대한 마커 크기 설정
-
-                marker_msg.scale.x = length;
-                marker_msg.scale.y = width;
-                marker_msg.scale.z = height;
-
-                marker_msg.pose.position.z = height / 2.0;
-
-                factsheet_received_ = true;
-                std::cout << "[ROS2] Received factsheet and set marker dimensions." << std::endl;
-            }
-            catch (const std::exception& e)
-            {
-                std::cerr << "[ERROR] Failed to parse factsheet json: " << e.what() << std::endl;
-            }
-        }
-    }
-
-    void connection_lost(const std::string &cause) override
-    {
-        std::cout << "[MQTT] Connection lost";
-        if (!cause.empty())
-            std::cout << ", cause: " << cause;
-        std::cout << std::endl;
+    ArcPublisher() : Node("fms_mqtt_publish") {
+        pub_ = this->create_publisher<visualization_msgs::msg::Marker>("arc_marker", 10);
+        loadOrderFile("/home/zenix/ros2_ws/src/fms_mqtt_publish/amr_0_order.json");  // JSON 파일 로드
+        timer_ = this->create_wall_timer(
+            std::chrono::milliseconds(500),
+            std::bind(&ArcPublisher::publishMarkers, this));
     }
 
 private:
-    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_pub_;
-    std::vector<rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr> marker_pubs_;
-    std::vector<visualization_msgs::msg::Marker> initialized_markers_;
-    rclcpp::Node::SharedPtr node_;
-    bool factsheet_received_;
+    std::vector<Node_> nodes_;
+    std::vector<Edge> edges_;
+
+    void loadOrderFile(const std::string &filename) {
+        std::ifstream file(filename);
+        if (!file.is_open()) {
+            RCLCPP_ERROR(this->get_logger(), "Failed to open %s", filename.c_str());
+            return;
+        }
+        json j;
+        file >> j;
+
+        // 노드 로드
+        for (auto &jn : j["nodes"]) {
+            Node_ n;
+            n.id = jn["nodeId"];
+            n.pos = {jn["nodePosition"]["x"], jn["nodePosition"]["y"]};
+            std::cout << "node : " <<  n.id << " " << n.pos.x << " " << n.pos.y << std::endl;
+            nodes_.push_back(n);
+        }
+
+        auto findNode = [&](const std::string &id) {
+            for (auto &n : nodes_) {
+                if (n.id == id) return n;
+            }
+            return Node_{};
+        };
+
+        // 에지 로드
+        for (auto &je : j["edges"]) {
+            Edge e;
+            e.id = je["edgeId"];
+            e.start = findNode(je["startNodeId"]);
+            e.end   = findNode(je["endNodeId"]);
+            std::cout << "edge : " <<  e.start.id << " " << e.end.id  << std::endl;
+            edges_.push_back(e);
+        }
+    }
+
+    void publishMarkers() {
+        int id_counter = 0;
+
+        // 직선 에지 표시
+        for (auto &e : edges_) {
+            visualization_msgs::msg::Marker line;
+            line.header.frame_id = "map";
+            line.header.stamp = this->now();
+            line.ns = "edges";
+            line.id = id_counter++;
+            line.type = visualization_msgs::msg::Marker::LINE_STRIP;
+            line.action = visualization_msgs::msg::Marker::ADD;
+            line.scale.x = 0.1;
+            line.color.r = 0.0;
+            line.color.g = 1.0;
+            line.color.b = 0.0;
+            line.color.a = 1.0;
+
+            geometry_msgs::msg::Point p;
+            p.x = e.start.pos.x; p.y = e.start.pos.y; p.z = 0;
+            line.points.push_back(p);
+            p.x = e.end.pos.x; p.y = e.end.pos.y; p.z = 0;
+            line.points.push_back(p);
+
+            pub_->publish(line);
+        }
+
+        // 에지 전환부에서 원호 표시
+        double wheelbase = 15.0;
+        double maxSteer = 30.0;
+
+        for (size_t i = 0; i + 1 < edges_.size(); ++i) 
+        {
+            auto [S, E, C] = computeArcPoints(edges_[i], edges_[i+1], wheelbase, maxSteer);
+
+            visualization_msgs::msg::Marker arc;
+            arc.header.frame_id = "map";
+            arc.header.stamp = this->now();
+            arc.ns = "arc";
+            arc.id = id_counter++;
+            arc.type = visualization_msgs::msg::Marker::LINE_STRIP;
+            arc.action = visualization_msgs::msg::Marker::ADD;
+            arc.scale.x = 0.1;
+            arc.color.r = 1.0;
+            arc.color.g = 0.0;
+            arc.color.b = 0.0;
+            arc.color.a = 1.0;
+
+            double r = std::hypot(S.x - C.x, S.y - C.y);
+            double theta_start = std::atan2(S.y - C.y, S.x - C.x);
+            double theta_end   = std::atan2(E.y - C.y, E.x - C.x);
+            if (theta_end < theta_start) theta_end += 2 * M_PI;
+
+            int segments = 20;
+            for (int k = 0; k <= segments; ++k) {
+                double t = theta_start + (theta_end - theta_start) * k / segments;
+                geometry_msgs::msg::Point pt;
+                pt.x = C.x + r * std::cos(t);
+                pt.y = C.y + r * std::sin(t);
+                pt.z = 0;
+                arc.points.push_back(pt);
+            }
+            pub_->publish(arc);
+        }
+    }
+
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pub_;
+    rclcpp::TimerBase::SharedPtr timer_;
 };
 
-// std::string readJsonFile(const std::string& file_path)
-// {
-//     std::ifstream file(file_path);
-//     if (!file.is_open())
-//     {
-//         std::cerr << "[ERROR] Failed to open file: " << file_path << std::endl;
-//         return "{}";
-//     }
-//     std::stringstream buffer;
-//     buffer << file.rdbuf();
-//     return buffer.str();
-// }
-
-// std::string createOrderPayloadForAmr(int amr_idx)
-// {
-//     // 예: amr_0_order.json, amr_1_order.json, ... 이런 형태 파일명 사용
-//     std::string file_path = "/home/zenix/ros2_ws/src/fms_mqtt_publish/amr_" + std::to_string(amr_idx) + "_order.json";
-//     return readJsonFile(file_path);
-// }
-
-std::string createOrderPayloadForAmr(int amr_idx)
-{
-    // 예시는 동일한 페이로드 반환, 실제로는 달리 작성
-    if (amr_idx == 0) {
-        return R"({
-              "headerId": "header_test",
-              "timestamp": 1650000000,
-              "orderId": "order_test_1",
-              "nodes": [
-                {"nodeId": "N1", "sequenceId": 0, "nodePosition": {"x":10.0, "y":0.0, "theta":0.0}},
-                {"nodeId": "N2", "sequenceId": 1, "nodePosition": {"x":50.0, "y":0.0, "theta":1.57}},
-                {"nodeId": "N3", "sequenceId": 2, "nodePosition": {"x":50.0, "y":100.0, "theta":3.14}},
-                {"nodeId": "N4", "sequenceId": 3, "nodePosition": {"x":0.0, "y":100.0, "theta":4.71}},
-                {"nodeId": "N5", "sequenceId": 4, "nodePosition": {"x":0.0, "y":0.0, "theta":0.0}},
-                {"nodeId": "N6", "sequenceId": 5, "nodePosition": {"x":10.0, "y":0.0, "theta":0.0}}
-              ],
-              "edges": [
-                {"edgeId": "E1", "sequenceId": 0, "startNodeId": "N1", "endNodeId": "N2", "maxSpeed": 3.3},
-                {"edgeId": "E2", "sequenceId": 1, "startNodeId": "N2", "endNodeId": "N3", "maxSpeed": 2.3},
-                {"edgeId": "E3", "sequenceId": 2, "startNodeId": "N3", "endNodeId": "N4", "maxSpeed": 3.3},
-                {"edgeId": "E4", "sequenceId": 3, "startNodeId": "N4", "endNodeId": "N5", "maxSpeed": 2.3},
-                {"edgeId": "E5", "sequenceId": 4, "startNodeId": "N5", "endNodeId": "N6", "maxSpeed": 2.3}
-              ]
-            })";
-    } else if (amr_idx == 1) {
-        return R"({
-              "headerId": "header_test",
-              "timestamp": 1650000000,
-              "orderId": "order_test_1",
-              "nodes": [
-                {"nodeId": "N1", "sequenceId": 0, "nodePosition": {"x":10.0, "y":20.0, "theta":0.0}},
-                {"nodeId": "N2", "sequenceId": 1, "nodePosition": {"x":50.0, "y":20.0, "theta":1.57}},
-                {"nodeId": "N3", "sequenceId": 2, "nodePosition": {"x":50.0, "y":100.0, "theta":3.14}},
-                {"nodeId": "N4", "sequenceId": 3, "nodePosition": {"x":0.0, "y":100.0, "theta":4.71}},
-                {"nodeId": "N5", "sequenceId": 4, "nodePosition": {"x":0.0, "y":20.0, "theta":0.0}},
-                {"nodeId": "N6", "sequenceId": 5, "nodePosition": {"x":10.0, "y":20.0, "theta":0.0}}
-              ],
-              "edges": [
-                {"edgeId": "E1", "sequenceId": 0, "startNodeId": "N1", "endNodeId": "N2", "maxSpeed": 3.3},
-                {"edgeId": "E2", "sequenceId": 1, "startNodeId": "N2", "endNodeId": "N3", "maxSpeed": 2.0},
-                {"edgeId": "E3", "sequenceId": 2, "startNodeId": "N3", "endNodeId": "N4", "maxSpeed": 3.0},
-                {"edgeId": "E4", "sequenceId": 3, "startNodeId": "N4", "endNodeId": "N5", "maxSpeed": 2.0},
-                {"edgeId": "E5", "sequenceId": 4, "startNodeId": "N5", "endNodeId": "N6", "maxSpeed": 3.0}
-              ]
-            })";
-    } else if (amr_idx == 2) {
-        return R"({
-              "headerId": "header_test",
-              "timestamp": 1650000000,
-              "orderId": "order_test_1",
-              "nodes": [
-                {"nodeId": "N1", "sequenceId": 0, "nodePosition": {"x":10.0, "y":40.0, "theta":0.0}},
-                {"nodeId": "N2", "sequenceId": 1, "nodePosition": {"x":50.0, "y":40.0, "theta":1.57}},
-                {"nodeId": "N3", "sequenceId": 2, "nodePosition": {"x":50.0, "y":100.0, "theta":3.14}},
-                {"nodeId": "N4", "sequenceId": 3, "nodePosition": {"x":0.0, "y":100.0, "theta":4.71}},
-                {"nodeId": "N5", "sequenceId": 4, "nodePosition": {"x":0.0, "y":40.0, "theta":0.0}},
-                {"nodeId": "N6", "sequenceId": 5, "nodePosition": {"x":10.0, "y":40.0, "theta":0.0}}
-              ],
-              "edges": [
-                {"edgeId": "E1", "sequenceId": 0, "startNodeId": "N1", "endNodeId": "N2", "maxSpeed": 1.3},
-                {"edgeId": "E2", "sequenceId": 1, "startNodeId": "N2", "endNodeId": "N3", "maxSpeed": 1.5},
-                {"edgeId": "E3", "sequenceId": 2, "startNodeId": "N3", "endNodeId": "N4", "maxSpeed": 3.5},
-                {"edgeId": "E4", "sequenceId": 3, "startNodeId": "N4", "endNodeId": "N5", "maxSpeed": 1.5},
-                {"edgeId": "E5", "sequenceId": 4, "startNodeId": "N5", "endNodeId": "N6", "maxSpeed": 3.5}
-              ]
-            })";
-    } else if (amr_idx == 3) {
-        return R"({
-              "headerId": "header_test",
-              "timestamp": 1650000000,
-              "orderId": "order_test_1",
-              "nodes": [
-                {"nodeId": "N1", "sequenceId": 0, "nodePosition": {"x":10.0, "y":60.0, "theta":0.0}},
-                {"nodeId": "N2", "sequenceId": 1, "nodePosition": {"x":50.0, "y":60.0, "theta":1.57}},
-                {"nodeId": "N3", "sequenceId": 2, "nodePosition": {"x":50.0, "y":100.0, "theta":3.14}},
-                {"nodeId": "N4", "sequenceId": 3, "nodePosition": {"x":0.0, "y":100.0, "theta":4.71}},
-                {"nodeId": "N5", "sequenceId": 4, "nodePosition": {"x":0.0, "y":60.0, "theta":0.0}},
-                {"nodeId": "N6", "sequenceId": 5, "nodePosition": {"x":10.0, "y":60.0, "theta":0.0}}
-              ],
-              "edges": [
-                {"edgeId": "E1", "sequenceId": 0, "startNodeId": "N1", "endNodeId": "N2", "maxSpeed": 3.3},
-                {"edgeId": "E2", "sequenceId": 1, "startNodeId": "N2", "endNodeId": "N3", "maxSpeed": 1.2},
-                {"edgeId": "E3", "sequenceId": 2, "startNodeId": "N3", "endNodeId": "N4", "maxSpeed": 3.2},
-                {"edgeId": "E4", "sequenceId": 3, "startNodeId": "N4", "endNodeId": "N5", "maxSpeed": 1.2},
-                {"edgeId": "E5", "sequenceId": 4, "startNodeId": "N5", "endNodeId": "N6", "maxSpeed": 3.2}
-              ]
-            })";
-    } else if (amr_idx == 4) {
-        return R"({
-              "headerId": "header_test",
-              "timestamp": 1650000000,
-              "orderId": "order_test_1",
-              "nodes": [
-                {"nodeId": "N1", "sequenceId": 0, "nodePosition": {"x":10.0, "y":80.0, "theta":0.0}},
-                {"nodeId": "N2", "sequenceId": 1, "nodePosition": {"x":50.0, "y":80.0, "theta":1.57}},
-                {"nodeId": "N3", "sequenceId": 2, "nodePosition": {"x":50.0, "y":100.0, "theta":3.14}},
-                {"nodeId": "N4", "sequenceId": 3, "nodePosition": {"x":0.0, "y":100.0, "theta":4.71}},
-                {"nodeId": "N5", "sequenceId": 4, "nodePosition": {"x":0.0, "y":80.0, "theta":0.0}},
-                {"nodeId": "N6", "sequenceId": 5, "nodePosition": {"x":10.0, "y":80.0, "theta":0.0}}
-              ],
-              "edges": [
-                {"edgeId": "E1", "sequenceId": 0, "startNodeId": "N1", "endNodeId": "N2", "maxSpeed": 2.3},
-                {"edgeId": "E2", "sequenceId": 1, "startNodeId": "N2", "endNodeId": "N3", "maxSpeed": 1.0},
-                {"edgeId": "E3", "sequenceId": 2, "startNodeId": "N3", "endNodeId": "N4", "maxSpeed": 3.0},
-                {"edgeId": "E4", "sequenceId": 3, "startNodeId": "N4", "endNodeId": "N5", "maxSpeed": 1.0},
-                {"edgeId": "E5", "sequenceId": 4, "startNodeId": "N5", "endNodeId": "N6", "maxSpeed": 3.0}
-              ]
-            })";
-    } else {
-        // 기본 또는 빈 페이로드 반환
-        return "{}";
-    }
-}
-
-
-
-int main(int argc, char* argv[])
-{
+int main(int argc, char **argv) {
     rclcpp::init(argc, argv);
-    auto node = rclcpp::Node::make_shared("fms_mqtt_publish");
-
-    auto pose_pub = node->create_publisher<geometry_msgs::msg::PoseStamped>("pose", 10);
-
-    auto edge_marker_pub = node->create_publisher<visualization_msgs::msg::Marker>("fms_order_edges_marker", 10);
-    
-    std::vector<rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr> marker_pubs;
-
-    for (int i = 0; i < AMR_COUNT; ++i)
-    {
-        std::string marker_topic = "agv_" + std::to_string(i) + "_marker";
-        marker_pubs.push_back(node->create_publisher<visualization_msgs::msg::Marker>(marker_topic, 10));
-    }
-
-    mqtt::async_client client(SERVER_ADDRESS, CLIENT_ID);
-    mqtt::connect_options connOpts;
-    connOpts.set_clean_session(true);
-
-    Callback cb(pose_pub, marker_pubs, node);
-    client.set_callback(cb);
-
-    try
-    {
-        std::cout << "Connecting to the MQTT server..." << std::endl;
-        mqtt::token_ptr conntok = client.connect(connOpts);
-        conntok->wait();
-        std::cout << "Connected!" << std::endl;
-
-        // AMR들에 대한 MQTT 구독
-        for (int i = 0; i < AMR_COUNT; ++i)
-        {
-            std::string topic_filter = "vda5050/agvs/amr_" + std::to_string(i) + "/#";
-            client.subscribe(topic_filter, QOS)->wait();
-            std::cout << "Subscribed to topic: " << topic_filter << std::endl;
-        }
-
-        // Factsheet 요청 instantAction 메시지 발행 (amr_0만 예시)
-        {
-            std::cout << "Publishing factsheet request instantAction message..." << std::endl;
-            auto instant_msg = mqtt::make_message("vda5050/agvs/amr_0/instantActions", FACTSHEET_REQUEST_INSTANT_ACTION);
-            instant_msg->set_qos(QOS);
-            client.publish(instant_msg)->wait();
-            std::cout << "Factsheet request message published!" << std::endl;
-        }
-
-        for (int i = 0; i < AMR_COUNT; ++i)
-        {
-            std::string order_topic = "vda5050/agvs/amr_" + std::to_string(i) + "/order";
-
-            std::string payload = createOrderPayloadForAmr(i);
-
-            auto order_msg = mqtt::make_message(order_topic, payload);
-            order_msg->set_qos(QOS);
-            client.publish(order_msg)->wait();
-
-            // RViz 경로 Marker publish
-            publishOrderEdgesAsLines(payload, edge_marker_pub, node);
-
-            // sleep(5);
-
-            std::cout << "Published order message to topic: " << order_topic << std::endl;
-        }
-
-        // 충분히 메시지 수신 대기
-        std::cout << "Waiting for state messages for 10 seconds..." << std::endl;
-        std::this_thread::sleep_for(std::chrono::seconds(10));
-
-        rclcpp::spin(node);
-
-        client.disconnect()->wait();
-        std::cout << "Disconnected." << std::endl;
-    }
-    catch (const mqtt::exception& exc)
-    {
-        std::cerr << "Error: " << exc.what() << std::endl;
-        return 1;
-    }
-
+    rclcpp::spin(std::make_shared<ArcPublisher>());
     rclcpp::shutdown();
     return 0;
 }

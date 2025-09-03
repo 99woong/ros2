@@ -26,7 +26,6 @@ endif()
 if (NOT PAHO_MQTT_C_LIB)
   message(FATAL_ERROR "paho-mqtt3a library not found")
 endif()
-
 add_executable(fms_mqtt_publish fms_mqtt_publish.cpp)
 
 ament_target_dependencies(fms_mqtt_publish

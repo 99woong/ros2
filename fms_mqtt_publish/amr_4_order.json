@@ -1,4 +1,5 @@
-              "headerId": "header_test",
+{
+"headerId": "header_test",
               "timestamp": 1650000000,
               "orderId": "order_test_1",
               "nodes": [
@@ -16,3 +17,4 @@
                 {"edgeId": "E4", "sequenceId": 3, "startNodeId": "N4", "endNodeId": "N5", "maxSpeed": 1.0},
                 {"edgeId": "E5", "sequenceId": 4, "startNodeId": "N5", "endNodeId": "N6", "maxSpeed": 3.0}
               ]
+              }
