@@ -1,0 +1,34 @@
+{
+    "edges": [
+        {"edgeId": "E1", "endNodeId": "NE1", "maxSpeed": 2.0, "sequenceId": 1, "startNodeId": "NS1", "turnCenter": "NC1"},
+        {"edgeId": "E3", "endNodeId": "NE2", "maxSpeed": 2.0, "sequenceId": 3, "startNodeId": "NS2", "turnCenter": "NC2"},
+        {"edgeId": "E5", "endNodeId": "NE3", "maxSpeed": 2.0, "sequenceId": 5, "startNodeId": "NS3", "turnCenter": "NC3"},
+        {"edgeId": "E7", "endNodeId": "NE4", "maxSpeed": 2.0, "sequenceId": 7, "startNodeId": "NS4", "turnCenter": "NC4"},
+        {"edgeId": "E2", "endNodeId": "NS1", "maxSpeed": 2.0, "sequenceId": 0, "startNodeId": "NE4"},
+        {"edgeId": "E4", "endNodeId": "NS2", "maxSpeed": 2.0, "sequenceId": 2, "startNodeId": "NE1"},
+        {"edgeId": "E6", "endNodeId": "NS3", "maxSpeed": 2.0, "sequenceId": 4, "startNodeId": "NE2"},
+        {"edgeId": "E8", "endNodeId": "NS4", "maxSpeed": 2.0, "sequenceId": 6, "startNodeId": "NE3"}
+    ],
+    "headerId": "header_test",
+    "nodes": [
+        {"nodeId": "N1", "nodePosition": {"theta": 0.0, "x": 0.0, "y": 0.0}, "sequenceId": 0},
+        {"nodeId": "N2", "nodePosition": {"theta": 0.0, "x": 100.0, "y": 0.0}, "sequenceId": 1},
+        {"nodeId": "N3", "nodePosition": {"theta": 0.0, "x": 100.0, "y": 100.0},"sequenceId": 2},
+        {"nodeId": "N4", "nodePosition": {"theta": 0.0, "x": 0.0,  "y": 100.0}, "sequenceId": 3},
+        {"nodeId": "N5", "nodePosition": {"theta": 0.0, "x": 0.0,  "y": 0.0}, "sequenceId": 4},
+        {"nodeId": "NS1","nodePosition": {"theta": 0.0, "x": 74.01, "y": 0.0},"sequenceId": 5},
+        {"nodeId": "NE1","nodePosition": {"theta": 1.57,"x": 100.0, "y": 25.98}, "sequenceId": 6},
+        {"nodeId": "NC1","nodePosition": {"theta": 0.0, "x": 74.01, "y": 25.98}, "sequenceId": 7},
+        {"nodeId": "NS2","nodePosition": {"theta": 1.57,"x": 100.0, "y": 74.01}, "sequenceId": 8},
+        {"nodeId": "NE2","nodePosition": {"theta": 3.14,"x": 74.01, "y": 100.0},"sequenceId": 9},
+        {"nodeId": "NC2","nodePosition": {"theta": 0.0, "x": 74.01, "y": 74.01},"sequenceId": 10},
+        {"nodeId": "NS3","nodePosition": {"theta": 3.14,"x": 25.98, "y": 100.0},"sequenceId": 11},
+        {"nodeId": "NE3","nodePosition": {"theta": 4.71,"x": 0.0, "y": 74.01},"sequenceId": 12},
+        {"nodeId": "NC3","nodePosition": {"theta": 0.0, "x": 25.98, "y": 74.01},"sequenceId": 13},
+        {"nodeId": "NS4","nodePosition": {"theta": 4.71,"x": 0.0,"y": 25.98},"sequenceId": 14},
+        {"nodeId": "NE4","nodePosition": {"theta": 0.0, "x": 25.98,"y": 0.0},"sequenceId": 15},
+        {"nodeId": "NC4","nodePosition": {"theta": 0.0, "x": 25.98,"y": 25.98},"sequenceId": 16}
+    ],
+    "orderId": "order_test_arc",
+    "timestamp": 1650000000
+}

@@ -1,201 +1,462 @@
-#include <rclcpp/rclcpp.hpp>
-#include <visualization_msgs/msg/marker.hpp>
-#include <geometry_msgs/msg/point.hpp>
-
-#include <cmath>
-#include <tuple>
-#include <fstream>
 #include <iostream>
+#include <string>
+#include <vector>
+#include <mqtt/async_client.h>
+#include <algorithm> 
+
+#include <rclcpp/rclcpp.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
+#include <visualization_msgs/msg/marker.hpp>
 #include <nlohmann/json.hpp>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <fstream>
+#include <sstream>
 
 using json = nlohmann::json;
 
-struct Point {
-    double x, y;
-};
+#define AMR_SIZE_X  3.0  
+#define AMR_SIZE_Y  2.0 
+#define AMR_SIZE_Z  2.0 
 
-struct Node_ {
-    std::string id;
-    Point pos;
-};
+#define AMR_COUNT 1
 
-struct Edge {
-    std::string id;
-    Node_ start;
-    Node_ end;
-};
+const std::string SERVER_ADDRESS("tcp://localhost:1883");
+const std::string CLIENT_ID("fms_client");
 
-Point normalize(const Point &p) {
-    double len = std::hypot(p.x, p.y);
-    return {p.x / len, p.y / len};
-}
+const int QOS = 1;
 
-std::tuple<Point, Point, Point> computeArcPoints(
-    const Edge &edge1, const Edge &edge2, double wheelbase, double max_steer_deg)
+const std::string FACTS_TOPIC = "vda5050/agvs/amr_0/instantActions";
+
+const std::string FACTSHEET_REQUEST_INSTANT_ACTION = R"({
+    "headerId": "factsheet_request_1",
+    "timestamp": 1650000000,
+    "version": "2.1.0",
+    "manufacturer": "FMSManufacturer",
+    "serialNumber": "fms_001",
+    "instantActions": [
+        {
+            "actionType": "factsheetRequest",
+            "actionId": "req_001"
+        }
+    ]
+})";
+
+std::vector<std::string> VISUALIZATION_TOPICS;
+std::vector<std::string> ORDER_TOPICS;
+
+struct NodeInfo 
 {
-    double delta = max_steer_deg * M_PI / 180.0;
-    double Rmin = wheelbase / std::tan(delta);
+    std::string nodeId;
+    int sequenceId;
+    double x;
+    double y;
+    double theta;
 
-    // 교차점 (코너점)
-    Point P = edge1.end.pos;
+    NodeInfo() : sequenceId(0), x(0), y(0), theta(0) {}
+};
 
-    // edge1 방향 (단위벡터)
-    Point dir1 = normalize({edge1.end.pos.x - edge1.start.pos.x,
-                            edge1.end.pos.y - edge1.start.pos.y});
-    // edge2 방향 (단위벡터)
-    Point dir2 = normalize({edge2.end.pos.x - edge2.start.pos.x,
-                            edge2.end.pos.y - edge2.start.pos.y});
+bool initialized = false;
 
-    // 시작점 (edge1 직선 위)
-    Point S = {P.x - dir1.x * Rmin, P.y - dir1.y * Rmin};
-    // 끝점 (edge2 직선 위)
-    Point E = {P.x + dir2.x * Rmin, P.y + dir2.y * Rmin};
+void publishOrderEdgesAsLines(const std::string& payload,
+                             rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub,
+                             rclcpp::Node::SharedPtr node)
+{
+    static visualization_msgs::msg::Marker line_marker;
 
-    // 각각의 법선벡터 (좌회전 기준)
-    Point n1{-dir1.y, dir1.x};
-    Point n2{-dir2.y, dir2.x};
+    if(!initialized)
+    {
+        line_marker.header.frame_id = "map";
+        line_marker.ns = "fms_order_edges";
+        line_marker.id = 0;
+        line_marker.type = visualization_msgs::msg::Marker::LINE_LIST;
+        line_marker.action = visualization_msgs::msg::Marker::ADD;
 
-    // 직선 S + λ*n1 과 E + μ*n2 의 교차점 → 중심점 C
-    double A1 = n1.x, B1 = -n2.x;
-    double C1 = E.x - S.x;
-    double A2 = n1.y, B2 = -n2.y;
-    double C2 = E.y - S.y;
+        line_marker.scale.x = 0.3;
+        line_marker.color.r = 0.5;
+        line_marker.color.g = 0.5;
+        line_marker.color.b = 1.0;
+        line_marker.color.a = 1.0;
+        
+        initialized = true;
+        std::cout << "initialized!!! " << std::endl;
+    }        
 
-    double det = A1 * B2 - A2 * B1;
-    if (std::fabs(det) < 1e-9) {
-        // 특수 케이스 (fail-safe)
-        return {S, E, P};
+    auto j = nlohmann::json::parse(payload);
+
+    if (!j.contains("nodes") || !j.contains("edges"))
+    {
+        std::cerr << "Missing nodes or edges in payload" << std::endl;
+        return;
     }
 
-    double lambda = (C1 * B2 - C2 * B1) / det;
-    Point C = {S.x + lambda * n1.x, S.y + lambda * n1.y};
+    struct NodeInfo {
+        std::string nodeId;
+        double x, y, theta;
+    };
 
-    return {S, E, C};
+    std::unordered_map<std::string, NodeInfo> node_map;
+    for (const auto& node : j["nodes"])
+    {
+        NodeInfo n;
+        n.nodeId = node.value("nodeId", "");
+        if (node.contains("nodePosition"))
+        {
+            n.x = node["nodePosition"].value("x", 0.0);
+            n.y = node["nodePosition"].value("y", 0.0);
+            n.theta = node["nodePosition"].value("theta", 0.0);
+        }
+        node_map[n.nodeId] = n;
+    }
+
+    // 기존 점들 초기화 (갱신 시 누적 방지)
+    line_marker.points.clear();
+    line_marker.header.stamp = node->get_clock()->now();    
+
+    for (const auto& edge : j["edges"])
+    {
+        static int arc_idx = 0;
+        std::string start_id = edge.value("startNodeId", "");
+        std::string end_id = edge.value("endNodeId", "");
+        if (node_map.find(start_id) == node_map.end() || node_map.find(end_id) == node_map.end())
+            continue;
+
+        const NodeInfo& start_node = node_map[start_id];
+        const NodeInfo& end_node = node_map[end_id];
+
+        // turnCenter가 있는 경우 → 원호 그리기
+        if (edge.contains("turnCenter"))
+        // if (0)
+        {
+            // std::string center_id = edge.value("turnCenter", "");
+            // if (node_map.find(center_id) == node_map.end()) continue;
+
+            auto tc = edge["turnCenter"];
+            double cx = tc.value("x", 0.0);
+            double cy = tc.value("y", 0.0);
+
+            // const NodeInfo& center_node = node_map[center_id];
+
+            // 원호 마커 새로 생성
+            visualization_msgs::msg::Marker arc_marker;
+            arc_marker.header.frame_id = "map";
+            arc_marker.header.stamp = node->get_clock()->now();
+            arc_marker.ns = "fms_order_arcs";
+            arc_marker.id = arc_idx++;   // arc_idx는 전역/정적 카운터
+            arc_marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
+            arc_marker.action = visualization_msgs::msg::Marker::ADD;
+
+            arc_marker.scale.x = 0.3;
+            arc_marker.color.r = 1.0;
+            arc_marker.color.g = 0.0;
+            arc_marker.color.b = 0.0;
+            arc_marker.color.a = 1.0;
+
+            std::cout << " turnCenter coord: " << cx << ", " << cy << std::endl;
+
+            // std::cout << " turnCenter id : " << center_id << " " << start_node.x << " " << start_node.y << std::endl;
+            // std::cout << " turnCenter id : " << center_id << " " << center_node.x << " " << center_node.y << std::endl;
+            // std::cout << " turnCenter id : " << center_id << " " << end_node.x << " " << end_node.y << std::endl;
+
+
+            // 반지름
+            // double radius = std::hypot(start_node.x - center_node.x, start_node.y - center_node.y);
+            // double start_angle = atan2(start_node.y - center_node.y, start_node.x - center_node.x);
+            // double end_angle   = atan2(end_node.y - center_node.y, end_node.x - center_node.x);
+            double radius = std::hypot(start_node.x - cx, start_node.y - cy);
+            double start_angle = atan2(start_node.y - cy, start_node.x - cx);
+            double end_angle   = atan2(end_node.y - cy, end_node.x - cx);
+
+            // 회전 방향(시계/반시계) 보정
+            double dtheta = end_angle - start_angle;
+            if (dtheta > M_PI) dtheta -= 2*M_PI;
+            else if (dtheta < -M_PI) dtheta += 2*M_PI;
+
+            int steps = 20; // 분할 수 (샘플링 포인트 개수)
+            for (int i = 0; i <= steps; i++)
+            {
+                double theta = start_angle + dtheta * (static_cast<double>(i)/steps);
+                geometry_msgs::msg::Point p;
+                // p.x = center_node.x + radius * cos(theta);
+                // p.y = center_node.y + radius * sin(theta);
+                p.x = cx + radius * cos(theta);
+                p.y = cy + radius * sin(theta);
+                p.z = 0.0;
+                arc_marker.points.push_back(p);
+            }
+            marker_pub->publish(arc_marker);
+        }
+        else
+        {
+            // 직선 edge 그대로 출력
+            geometry_msgs::msg::Point p_start, p_end;
+            p_start.x = start_node.x;
+            p_start.y = start_node.y;
+            p_start.z = 0.0;
+
+            p_end.x = end_node.x;
+            p_end.y = end_node.y;
+            p_end.z = 0.0;
+
+            line_marker.points.push_back(p_start);
+            line_marker.points.push_back(p_end);
+        }
+    }
+    marker_pub->publish(line_marker);
+    
 }
 
-class ArcPublisher : public rclcpp::Node {
+// MQTT 콜백 핸들러 클래스 정의 - 다수 AMR 지원
+class Callback : public virtual mqtt::callback
+{
 public:
-    ArcPublisher() : Node("fms_mqtt_publish") {
-        pub_ = this->create_publisher<visualization_msgs::msg::Marker>("arc_marker", 10);
-        loadOrderFile("/home/zenix/ros2_ws/src/fms_mqtt_publish/amr_0_order.json");  // JSON 파일 로드
-        timer_ = this->create_wall_timer(
-            std::chrono::milliseconds(500),
-            std::bind(&ArcPublisher::publishMarkers, this));
+    Callback(rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_pub,
+             const std::vector<rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr>& marker_pubs,
+             rclcpp::Node::SharedPtr node)
+        : pose_pub_(pose_pub), marker_pubs_(marker_pubs), node_(node), factsheet_received_(false)
+    {
+        for (size_t i = 0; i < marker_pubs_.size(); ++i)
+        {
+            visualization_msgs::msg::Marker marker_msg;
+            marker_msg.header.frame_id = "map";
+            marker_msg.ns = "amr_model_" + std::to_string(i);
+            marker_msg.id = 0;
+            marker_msg.type = visualization_msgs::msg::Marker::CUBE;
+            marker_msg.action = visualization_msgs::msg::Marker::ADD;
+            marker_msg.color.a = 0.8; // 투명도
+            marker_msg.color.r = 0.0;
+            marker_msg.color.g = 1.0;
+            marker_msg.color.b = 0.0;
+            initialized_markers_.push_back(marker_msg);
+            usleep(10000);
+        }
+    }
+
+    void message_arrived(mqtt::const_message_ptr msg) override
+    {
+        std::string topic = msg->get_topic();
+        std::string payload = msg->to_string();
+
+        for (size_t i = 0; i < AMR_COUNT; ++i)
+        {
+            // std::cout << "recv visualzation : " << i  << " " << payload <<  std::endl;
+
+            if (topic == VISUALIZATION_TOPICS[i])
+            {
+                // std::cout << "[MQTT] Visualization message arrived for amr_" << i << std::endl;
+                try
+                {
+                    auto j = json::parse(payload);
+                    auto pose_json = j.at("pose");
+                    double x = pose_json.at("x").get<double>();
+                    double y = pose_json.at("y").get<double>();
+                    double theta = pose_json.at("theta").get<double>();
+
+                    geometry_msgs::msg::PoseStamped pose;
+                    pose.header.stamp = node_->get_clock()->now();
+                    pose.header.frame_id = "map";
+                    pose.pose.position.x = x;
+                    pose.pose.position.y = y;
+                    pose.pose.position.z = 1.0;
+
+                    tf2::Quaternion q;
+                    q.setRPY(0, 0, theta);
+                    pose.pose.orientation = tf2::toMsg(q);
+
+                    pose_pub_->publish(pose);
+
+                    auto& marker_msg = initialized_markers_[i];
+                    marker_msg.header.stamp = node_->get_clock()->now();
+                    marker_msg.pose = pose.pose;
+
+                    marker_msg.scale.x = AMR_SIZE_X;
+                    marker_msg.scale.y = AMR_SIZE_Y;
+                    marker_msg.scale.z = AMR_SIZE_Z;
+
+                    marker_pubs_[i]->publish(marker_msg);
+                }
+                catch (...)
+                {
+                    std::cerr << "[ERROR] Failed to parse visualization json for AMR " << i << std::endl;
+                }
+            }
+        }
+
+        if (topic == FACTS_TOPIC && !factsheet_received_)
+        {
+            std::cout << "[MQTT] Factsheet message arrived\n";
+            try
+            {
+                auto j = json::parse(payload);
+                auto physical_params = j.at("physicalParameters");
+                double width = physical_params.at("width").get<double>();
+                double length = physical_params.at("length").get<double>();
+                double height = physical_params.at("heightMax").get<double>();
+
+                auto& marker_msg = initialized_markers_[0]; // amr_0 에 대한 마커 크기 설정
+
+                marker_msg.scale.x = length;
+                marker_msg.scale.y = width;
+                marker_msg.scale.z = height;
+
+                marker_msg.pose.position.z = height / 2.0;
+
+                factsheet_received_ = true;
+                std::cout << "[ROS2] Received factsheet and set marker dimensions." << std::endl;
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "[ERROR] Failed to parse factsheet json: " << e.what() << std::endl;
+            }
+        }
+    }
+
+    void connection_lost(const std::string &cause) override
+    {
+        std::cout << "[MQTT] Connection lost";
+        if (!cause.empty())
+            std::cout << ", cause: " << cause;
+        std::cout << std::endl;
     }
 
 private:
-    std::vector<Node_> nodes_;
-    std::vector<Edge> edges_;
-
-    void loadOrderFile(const std::string &filename) {
-        std::ifstream file(filename);
-        if (!file.is_open()) {
-            RCLCPP_ERROR(this->get_logger(), "Failed to open %s", filename.c_str());
-            return;
-        }
-        json j;
-        file >> j;
-
-        // 노드 로드
-        for (auto &jn : j["nodes"]) {
-            Node_ n;
-            n.id = jn["nodeId"];
-            n.pos = {jn["nodePosition"]["x"], jn["nodePosition"]["y"]};
-            std::cout << "node : " <<  n.id << " " << n.pos.x << " " << n.pos.y << std::endl;
-            nodes_.push_back(n);
-        }
-
-        auto findNode = [&](const std::string &id) {
-            for (auto &n : nodes_) {
-                if (n.id == id) return n;
-            }
-            return Node_{};
-        };
-
-        // 에지 로드
-        for (auto &je : j["edges"]) {
-            Edge e;
-            e.id = je["edgeId"];
-            e.start = findNode(je["startNodeId"]);
-            e.end   = findNode(je["endNodeId"]);
-            std::cout << "edge : " <<  e.start.id << " " << e.end.id  << std::endl;
-            edges_.push_back(e);
-        }
-    }
-
-    void publishMarkers() {
-        int id_counter = 0;
-
-        // 직선 에지 표시
-        for (auto &e : edges_) {
-            visualization_msgs::msg::Marker line;
-            line.header.frame_id = "map";
-            line.header.stamp = this->now();
-            line.ns = "edges";
-            line.id = id_counter++;
-            line.type = visualization_msgs::msg::Marker::LINE_STRIP;
-            line.action = visualization_msgs::msg::Marker::ADD;
-            line.scale.x = 0.1;
-            line.color.r = 0.0;
-            line.color.g = 1.0;
-            line.color.b = 0.0;
-            line.color.a = 1.0;
-
-            geometry_msgs::msg::Point p;
-            p.x = e.start.pos.x; p.y = e.start.pos.y; p.z = 0;
-            line.points.push_back(p);
-            p.x = e.end.pos.x; p.y = e.end.pos.y; p.z = 0;
-            line.points.push_back(p);
-
-            pub_->publish(line);
-        }
-
-        // 에지 전환부에서 원호 표시
-        double wheelbase = 15.0;
-        double maxSteer = 30.0;
-
-        for (size_t i = 0; i + 1 < edges_.size(); ++i) 
-        {
-            auto [S, E, C] = computeArcPoints(edges_[i], edges_[i+1], wheelbase, maxSteer);
-
-            visualization_msgs::msg::Marker arc;
-            arc.header.frame_id = "map";
-            arc.header.stamp = this->now();
-            arc.ns = "arc";
-            arc.id = id_counter++;
-            arc.type = visualization_msgs::msg::Marker::LINE_STRIP;
-            arc.action = visualization_msgs::msg::Marker::ADD;
-            arc.scale.x = 0.1;
-            arc.color.r = 1.0;
-            arc.color.g = 0.0;
-            arc.color.b = 0.0;
-            arc.color.a = 1.0;
-
-            double r = std::hypot(S.x - C.x, S.y - C.y);
-            double theta_start = std::atan2(S.y - C.y, S.x - C.x);
-            double theta_end   = std::atan2(E.y - C.y, E.x - C.x);
-            if (theta_end < theta_start) theta_end += 2 * M_PI;
-
-            int segments = 20;
-            for (int k = 0; k <= segments; ++k) {
-                double t = theta_start + (theta_end - theta_start) * k / segments;
-                geometry_msgs::msg::Point pt;
-                pt.x = C.x + r * std::cos(t);
-                pt.y = C.y + r * std::sin(t);
-                pt.z = 0;
-                arc.points.push_back(pt);
-            }
-            pub_->publish(arc);
-        }
-    }
-
-    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr pub_;
-    rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr pose_pub_;
+    std::vector<rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr> marker_pubs_;
+    std::vector<visualization_msgs::msg::Marker> initialized_markers_;
+    rclcpp::Node::SharedPtr node_;
+    bool factsheet_received_;
 };
 
-int main(int argc, char **argv) {
+std::string readJsonFile(const std::string& file_path)
+{
+    std::ifstream file(file_path);
+    if (!file.is_open())
+    {
+        std::cerr << "[ERROR] Failed to open file: " << file_path << std::endl;
+        return "{}";
+    }
+    std::stringstream buffer;
+    buffer << file.rdbuf();
+    return buffer.str();
+}
+
+std::string createOrderPayloadForAmr(int amr_idx)
+{
+    // 예: amr_0_order.json, amr_1_order.json, ... 이런 형태 파일명 사용
+    std::string file_path = "/home/zenix/ros2_ws/src/fms_mqtt_publish/amr_" + std::to_string(amr_idx) + "_order_arc.json";
+    // std::string file_path = "/home/zenix/ros2_ws/src/fms_mqtt_publish/amr_" + std::to_string(amr_idx) + "_order.json";
+    return readJsonFile(file_path);
+}
+
+
+int main(int argc, char* argv[])
+{
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<ArcPublisher>());
+    auto node = rclcpp::Node::make_shared("fms_mqtt_publish");
+    auto pose_pub = node->create_publisher<geometry_msgs::msg::PoseStamped>("pose", 10);
+    auto edge_marker_pub = node->create_publisher<visualization_msgs::msg::Marker>("fms_order_edges_marker", 10);
+
+    for(int i = 0; i < AMR_COUNT; ++i) 
+    {
+        VISUALIZATION_TOPICS.push_back("vda5050/agvs/amr_" + std::to_string(i) + "/visualization");
+        ORDER_TOPICS.push_back("vda5050/agvs/amr_" + std::to_string(i) + "/order");
+    }
+
+    // 확인용 출력
+    for(const auto& topic : VISUALIZATION_TOPICS)
+        std::cout << topic << std::endl;
+    for(const auto& topic : ORDER_TOPICS)
+        std::cout << topic << std::endl;
+
+    
+    std::vector<rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr> marker_pubs;
+
+    for (int i = 0; i < AMR_COUNT; ++i)
+    {
+        std::string marker_topic = "agv_" + std::to_string(i) + "_marker";
+        marker_pubs.push_back(node->create_publisher<visualization_msgs::msg::Marker>(marker_topic, 10));
+    }
+
+    mqtt::async_client client(SERVER_ADDRESS, CLIENT_ID);
+    mqtt::connect_options connOpts;
+    connOpts.set_clean_session(true);
+
+    Callback cb(pose_pub, marker_pubs, node);
+    client.set_callback(cb);
+
+    try
+    {
+        std::cout << "Connecting to the MQTT server..." << std::endl;
+        mqtt::token_ptr conntok = client.connect(connOpts);
+        conntok->wait();
+        std::cout << "Connected!" << std::endl;
+
+        // AMR들에 대한 MQTT 구독
+        for (int i = 0; i < AMR_COUNT; ++i)
+        {
+            std::string topic_filter = "vda5050/agvs/amr_" + std::to_string(i) + "/#";
+            client.subscribe(topic_filter, QOS)->wait();
+            std::cout << "Subscribed to topic: " << topic_filter << std::endl;
+        }
+
+        // Factsheet 요청 instantAction 메시지 발행 (amr_0만 예시)
+        {
+            std::cout << "Publishing factsheet request instantAction message..." << std::endl;
+            auto instant_msg = mqtt::make_message("vda5050/agvs/amr_0/instantActions", FACTSHEET_REQUEST_INSTANT_ACTION);
+            instant_msg->set_qos(QOS);
+            client.publish(instant_msg)->wait();
+            std::cout << "Factsheet request message published!" << std::endl;
+        }
+
+        for (int i = 0; i < AMR_COUNT; ++i)
+        {
+            std::string order_topic = "vda5050/agvs/amr_" + std::to_string(i) + "/order";
+
+            std::string payload = createOrderPayloadForAmr(i);
+            std::cout << "[DEBUG] Payload for AMR " << i << ": " << payload << std::endl;
+
+            try
+            {
+                auto order_msg = mqtt::make_message(order_topic, payload);
+                order_msg->set_qos(QOS);
+                // auto token = client.publish(order_msg)->wait();
+                auto token = client.publish(order_msg);
+                token->wait();
+                if (!token->is_complete()) 
+                {
+                    std::cerr << "[ERROR] MQTT publish not complete for topic: " << order_topic << std::endl;   
+                }
+            }
+            catch(const std::exception& e)
+            {
+                std::cerr << "[EXCEPTION] MQTT publish error for topic: " << order_topic << " - " << e.what() << std::endl;
+            }
+            
+
+
+            // RViz 경로 Marker publish
+            publishOrderEdgesAsLines(payload, edge_marker_pub, node);
+
+            // sleep(5);
+
+            std::cout << "Published order message to topic: " << order_topic << std::endl;
+        }
+
+        // 충분히 메시지 수신 대기
+        std::cout << "Waiting for state messages for 10 seconds..." << std::endl;
+        std::this_thread::sleep_for(std::chrono::seconds(10));
+
+        rclcpp::spin(node);
+
+        client.disconnect()->wait();
+        std::cout << "Disconnected." << std::endl;
+    }
+    catch (const mqtt::exception& exc)
+    {
+        std::cerr << "Error: " << exc.what() << std::endl;
+        return 1;
+    }
+
     rclcpp::shutdown();
     return 0;
 }
