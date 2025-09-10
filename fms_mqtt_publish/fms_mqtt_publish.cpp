@@ -15,8 +15,8 @@
 
 using json = nlohmann::json;
 
-#define AMR_SIZE_X  3.0  
-#define AMR_SIZE_Y  2.0 
+#define AMR_SIZE_X  15.0  
+#define AMR_SIZE_Y  5.0 
 #define AMR_SIZE_Z  2.0 
 
 #define AMR_COUNT 1
@@ -116,6 +116,7 @@ void publishOrderEdgesAsLines(const std::string& payload,
     for (const auto& edge : j["edges"])
     {
         static int arc_idx = 0;
+        static int line_idx = 0;
         std::string start_id = edge.value("startNodeId", "");
         std::string end_id = edge.value("endNodeId", "");
         if (node_map.find(start_id) == node_map.end() || node_map.find(end_id) == node_map.end())
@@ -126,11 +127,7 @@ void publishOrderEdgesAsLines(const std::string& payload,
 
         // turnCenter가 있는 경우 → 원호 그리기
         if (edge.contains("turnCenter"))
-        // if (0)
         {
-            // std::string center_id = edge.value("turnCenter", "");
-            // if (node_map.find(center_id) == node_map.end()) continue;
-
             auto tc = edge["turnCenter"];
             double cx = tc.value("x", 0.0);
             double cy = tc.value("y", 0.0);
@@ -138,31 +135,22 @@ void publishOrderEdgesAsLines(const std::string& payload,
             // const NodeInfo& center_node = node_map[center_id];
 
             // 원호 마커 새로 생성
-            visualization_msgs::msg::Marker arc_marker;
-            arc_marker.header.frame_id = "map";
-            arc_marker.header.stamp = node->get_clock()->now();
-            arc_marker.ns = "fms_order_arcs";
-            arc_marker.id = arc_idx++;   // arc_idx는 전역/정적 카운터
-            arc_marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
-            arc_marker.action = visualization_msgs::msg::Marker::ADD;
+            // visualization_msgs::msg::Marker arc_marker;
+            // arc_marker.header.frame_id = "map";
+            // arc_marker.header.stamp = node->get_clock()->now();
+            // arc_marker.ns = "fms_order_arcs";
+            // arc_marker.id = arc_idx++;   // arc_idx는 전역/정적 카운터
+            // arc_marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
+            // arc_marker.action = visualization_msgs::msg::Marker::ADD;
 
-            arc_marker.scale.x = 0.3;
-            arc_marker.color.r = 1.0;
-            arc_marker.color.g = 0.0;
-            arc_marker.color.b = 0.0;
-            arc_marker.color.a = 1.0;
+            // arc_marker.scale.x = 0.3;
+            // arc_marker.color.r = 1.0;
+            // arc_marker.color.g = 0.0;
+            // arc_marker.color.b = 0.0;
+            // arc_marker.color.a = 1.0;
 
             std::cout << " turnCenter coord: " << cx << ", " << cy << std::endl;
 
-            // std::cout << " turnCenter id : " << center_id << " " << start_node.x << " " << start_node.y << std::endl;
-            // std::cout << " turnCenter id : " << center_id << " " << center_node.x << " " << center_node.y << std::endl;
-            // std::cout << " turnCenter id : " << center_id << " " << end_node.x << " " << end_node.y << std::endl;
-
-
-            // 반지름
-            // double radius = std::hypot(start_node.x - center_node.x, start_node.y - center_node.y);
-            // double start_angle = atan2(start_node.y - center_node.y, start_node.x - center_node.x);
-            // double end_angle   = atan2(end_node.y - center_node.y, end_node.x - center_node.x);
             double radius = std::hypot(start_node.x - cx, start_node.y - cy);
             double start_angle = atan2(start_node.y - cy, start_node.x - cx);
             double end_angle   = atan2(end_node.y - cy, end_node.x - cx);
@@ -173,8 +161,22 @@ void publishOrderEdgesAsLines(const std::string& payload,
             else if (dtheta < -M_PI) dtheta += 2*M_PI;
 
             int steps = 20; // 분할 수 (샘플링 포인트 개수)
+            visualization_msgs::msg::Marker arc_marker;
             for (int i = 0; i <= steps; i++)
             {
+                arc_marker.header.frame_id = "map";
+                arc_marker.header.stamp = node->get_clock()->now();
+                arc_marker.ns = "fms_order_arcs";
+                arc_marker.id = arc_idx++;   // arc_idx는 전역/정적 카운터
+                arc_marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
+                arc_marker.action = visualization_msgs::msg::Marker::ADD;
+
+                arc_marker.scale.x = 0.3;
+                arc_marker.color.r = 1.0;
+                arc_marker.color.g = 0.0;
+                arc_marker.color.b = 0.0;
+                arc_marker.color.a = 1.0;
+
                 double theta = start_angle + dtheta * (static_cast<double>(i)/steps);
                 geometry_msgs::msg::Point p;
                 // p.x = center_node.x + radius * cos(theta);
@@ -197,6 +199,21 @@ void publishOrderEdgesAsLines(const std::string& payload,
             p_end.x = end_node.x;
             p_end.y = end_node.y;
             p_end.z = 0.0;
+
+
+            std::cout << " line coord : " << p_start.x << ", " << p_start.y << " " << p_end.x << " " << p_end.y << std::endl;
+
+            line_marker.header.frame_id = "map";
+            line_marker.ns = "fms_order_edges";
+            line_marker.id = line_idx++;
+            line_marker.type = visualization_msgs::msg::Marker::LINE_LIST;
+            line_marker.action = visualization_msgs::msg::Marker::ADD;
+
+            line_marker.scale.x = 0.3;
+            line_marker.color.r = 0.5;
+            line_marker.color.g = 0.5;
+            line_marker.color.b = 1.0;
+            line_marker.color.a = 1.0;            
 
             line_marker.points.push_back(p_start);
             line_marker.points.push_back(p_end);
@@ -381,6 +398,8 @@ int main(int argc, char* argv[])
     mqtt::connect_options connOpts;
     connOpts.set_clean_session(true);
 
+    sleep(1);
+
     Callback cb(pose_pub, marker_pubs, node);
     client.set_callback(cb);
 
@@ -433,11 +452,11 @@ int main(int argc, char* argv[])
             }
             
 
+            // sleep(1);
 
             // RViz 경로 Marker publish
             publishOrderEdgesAsLines(payload, edge_marker_pub, node);
 
-            // sleep(5);
 
             std::cout << "Published order message to topic: " << order_topic << std::endl;
         }
