@@ -1,0 +1,16 @@
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/lib/map_generator/map_generator
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/ament_index/resource_index/package_run_dependencies/map_generator
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/ament_index/resource_index/parent_prefix_path/map_generator
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/environment/ament_prefix_path.sh
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/environment/ament_prefix_path.dsv
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/environment/path.sh
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/environment/path.dsv
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/local_setup.bash
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/local_setup.sh
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/local_setup.zsh
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/local_setup.dsv
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/package.dsv
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/ament_index/resource_index/packages/map_generator
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/cmake/map_generatorConfig.cmake
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/cmake/map_generatorConfig-version.cmake
+/home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/package.xml

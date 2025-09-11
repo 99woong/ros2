@@ -1,0 +1,25 @@
+[0.006s] Invoking command in '/home/zenix/ros2_ws/src/map_generator/build/map_generator': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/zenix/ros2_ws/src/map_generator/build/map_generator -- -j28 -l28
+[0.043s] [ 50%] [32mBuilding CXX object CMakeFiles/map_generator.dir/main.cpp.o[0m
+[3.209s] [100%] [32m[1mLinking CXX executable map_generator[0m
+[3.329s] [100%] Built target map_generator
+[3.339s] Invoked command in '/home/zenix/ros2_ws/src/map_generator/build/map_generator' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/zenix/ros2_ws/src/map_generator/build/map_generator -- -j28 -l28
+[3.344s] Invoking command in '/home/zenix/ros2_ws/src/map_generator/build/map_generator': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/zenix/ros2_ws/src/map_generator/build/map_generator
+[3.349s] -- Install configuration: ""
+[3.349s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/lib/map_generator/map_generator
+[3.350s] -- Set non-toolchain portion of runtime path of "/home/zenix/ros2_ws/src/map_generator/install/map_generator/lib/map_generator/map_generator" to ""
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/ament_index/resource_index/package_run_dependencies/map_generator
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/ament_index/resource_index/parent_prefix_path/map_generator
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/environment/ament_prefix_path.sh
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/environment/ament_prefix_path.dsv
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/environment/path.sh
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/environment/path.dsv
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/local_setup.bash
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/local_setup.sh
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/local_setup.zsh
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/local_setup.dsv
+[3.350s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/package.dsv
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/ament_index/resource_index/packages/map_generator
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/cmake/map_generatorConfig.cmake
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/cmake/map_generatorConfig-version.cmake
+[3.350s] -- Up-to-date: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/package.xml
+[3.351s] Invoked command in '/home/zenix/ros2_ws/src/map_generator/build/map_generator' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/zenix/ros2_ws/src/map_generator/build/map_generator

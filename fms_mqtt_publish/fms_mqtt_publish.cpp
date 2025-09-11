@@ -10,6 +10,7 @@
 #include <nlohmann/json.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <ament_index_cpp/get_package_share_directory.hpp>
 #include <fstream>
 #include <sstream>
 
@@ -131,23 +132,6 @@ void publishOrderEdgesAsLines(const std::string& payload,
             auto tc = edge["turnCenter"];
             double cx = tc.value("x", 0.0);
             double cy = tc.value("y", 0.0);
-
-            // const NodeInfo& center_node = node_map[center_id];
-
-            // 원호 마커 새로 생성
-            // visualization_msgs::msg::Marker arc_marker;
-            // arc_marker.header.frame_id = "map";
-            // arc_marker.header.stamp = node->get_clock()->now();
-            // arc_marker.ns = "fms_order_arcs";
-            // arc_marker.id = arc_idx++;   // arc_idx는 전역/정적 카운터
-            // arc_marker.type = visualization_msgs::msg::Marker::LINE_STRIP;
-            // arc_marker.action = visualization_msgs::msg::Marker::ADD;
-
-            // arc_marker.scale.x = 0.3;
-            // arc_marker.color.r = 1.0;
-            // arc_marker.color.g = 0.0;
-            // arc_marker.color.b = 0.0;
-            // arc_marker.color.a = 1.0;
 
             std::cout << " turnCenter coord: " << cx << ", " << cy << std::endl;
 
@@ -360,8 +344,11 @@ std::string readJsonFile(const std::string& file_path)
 std::string createOrderPayloadForAmr(int amr_idx)
 {
     // 예: amr_0_order.json, amr_1_order.json, ... 이런 형태 파일명 사용
-    std::string file_path = "/home/zenix/ros2_ws/src/fms_mqtt_publish/amr_" + std::to_string(amr_idx) + "_order_arc.json";
-    // std::string file_path = "/home/zenix/ros2_ws/src/fms_mqtt_publish/amr_" + std::to_string(amr_idx) + "_order.json";
+    std::string package_share_directory = ament_index_cpp::get_package_share_directory("map_generator");
+    std::string file_path = package_share_directory + "/maps/amr_" + std::to_string(amr_idx) + "_order_arc.json";
+
+    // std::string file_path = "../map_generator/maps/amr_" + std::to_string(amr_idx) + "_order_arc.json";
+    // std::string file_path = "/home/zenix/ros2_ws/src/map_generator/maps/amr_" + std::to_string(amr_idx) + "_order_arc.json";
     return readJsonFile(file_path);
 }
 

@@ -1,0 +1,65 @@
+[0.005s] Invoking command in '/home/zenix/ros2_ws/src/map_generator/build/map_generator': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/zenix/ros2_ws/src/map_generator -DCMAKE_INSTALL_PREFIX=/home/zenix/ros2_ws/src/map_generator/install/map_generator
+[0.038s] -- The C compiler identification is GNU 13.3.0
+[0.065s] -- The CXX compiler identification is GNU 13.3.0
+[0.075s] -- Detecting C compiler ABI info
+[0.123s] -- Detecting C compiler ABI info - done
+[0.128s] -- Check for working C compiler: /usr/bin/cc - skipped
+[0.128s] -- Detecting C compile features
+[0.128s] -- Detecting C compile features - done
+[0.133s] -- Detecting CXX compiler ABI info
+[0.187s] -- Detecting CXX compiler ABI info - done
+[0.192s] -- Check for working CXX compiler: /usr/bin/c++ - skipped
+[0.192s] -- Detecting CXX compile features
+[0.192s] -- Detecting CXX compile features - done
+[0.193s] -- Found ament_cmake: 2.5.4 (/opt/ros/jazzy/share/ament_cmake/cmake)
+[0.270s] -- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter 
+[0.320s] -- Found rclcpp: 28.1.11 (/opt/ros/jazzy/share/rclcpp/cmake)
+[0.339s] -- Found rosidl_generator_c: 4.6.6 (/opt/ros/jazzy/share/rosidl_generator_c/cmake)
+[0.345s] -- Found rosidl_generator_cpp: 4.6.6 (/opt/ros/jazzy/share/rosidl_generator_cpp/cmake)
+[0.353s] -- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c
+[0.361s] -- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp
+[0.399s] -- Found rmw_implementation_cmake: 7.3.2 (/opt/ros/jazzy/share/rmw_implementation_cmake/cmake)
+[0.400s] -- Found rmw_fastrtps_cpp: 8.4.3 (/opt/ros/jazzy/share/rmw_fastrtps_cpp/cmake)
+[0.445s] -- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.13")  
+[0.455s] -- Found FastRTPS: /opt/ros/jazzy/include (Required is at least version "2.13") 
+[0.470s] -- Using RMW implementation 'rmw_fastrtps_cpp' as default
+[0.506s] -- Found geometry_msgs: 5.3.6 (/opt/ros/jazzy/share/geometry_msgs/cmake)
+[0.523s] -- Found tf2: 0.36.14 (/opt/ros/jazzy/share/tf2/cmake)
+[0.526s] -- Found tf2_geometry_msgs: 0.36.14 (/opt/ros/jazzy/share/tf2_geometry_msgs/cmake)
+[0.532s] -- Found eigen3_cmake_module: 0.3.0 (/opt/ros/jazzy/share/eigen3_cmake_module/cmake)
+[0.533s] -- Found Eigen3: TRUE (found version "3.4.0") 
+[0.533s] -- Ensuring Eigen3 include directory is part of orocos-kdl CMake target
+[0.600s] -- Found nlohmann_json: /usr/share/cmake/nlohmann_json/nlohmann_jsonConfig.cmake (found version "3.11.3") 
+[0.600s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD
+[0.647s] -- Performing Test CMAKE_HAVE_LIBC_PTHREAD - Success
+[0.648s] -- Found Threads: TRUE  
+[0.649s] -- Found visualization_msgs: 5.3.6 (/opt/ros/jazzy/share/visualization_msgs/cmake)
+[0.725s] -- Configuring done (0.7s)
+[0.732s] -- Generating done (0.0s)
+[0.734s] -- Build files have been written to: /home/zenix/ros2_ws/src/map_generator/build/map_generator
+[0.740s] Invoked command in '/home/zenix/ros2_ws/src/map_generator/build/map_generator' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake /home/zenix/ros2_ws/src/map_generator -DCMAKE_INSTALL_PREFIX=/home/zenix/ros2_ws/src/map_generator/install/map_generator
+[0.740s] Invoking command in '/home/zenix/ros2_ws/src/map_generator/build/map_generator': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/zenix/ros2_ws/src/map_generator/build/map_generator -- -j28 -l28
+[0.772s] [ 50%] [32mBuilding CXX object CMakeFiles/map_generator.dir/main.cpp.o[0m
+[3.926s] [100%] [32m[1mLinking CXX executable map_generator[0m
+[4.048s] [100%] Built target map_generator
+[4.058s] Invoked command in '/home/zenix/ros2_ws/src/map_generator/build/map_generator' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/zenix/ros2_ws/src/map_generator/build/map_generator -- -j28 -l28
+[4.065s] Invoking command in '/home/zenix/ros2_ws/src/map_generator/build/map_generator': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/zenix/ros2_ws/src/map_generator/build/map_generator
+[4.069s] -- Install configuration: ""
+[4.069s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/lib/map_generator/map_generator
+[4.070s] -- Set non-toolchain portion of runtime path of "/home/zenix/ros2_ws/src/map_generator/install/map_generator/lib/map_generator/map_generator" to ""
+[4.070s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/ament_index/resource_index/package_run_dependencies/map_generator
+[4.070s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/ament_index/resource_index/parent_prefix_path/map_generator
+[4.070s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/environment/ament_prefix_path.sh
+[4.070s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/environment/ament_prefix_path.dsv
+[4.070s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/environment/path.sh
+[4.071s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/environment/path.dsv
+[4.071s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/local_setup.bash
+[4.071s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/local_setup.sh
+[4.071s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/local_setup.zsh
+[4.071s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/local_setup.dsv
+[4.071s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/package.dsv
+[4.071s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/ament_index/resource_index/packages/map_generator
+[4.071s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/cmake/map_generatorConfig.cmake
+[4.071s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/cmake/map_generatorConfig-version.cmake
+[4.071s] -- Installing: /home/zenix/ros2_ws/src/map_generator/install/map_generator/share/map_generator/package.xml
+[4.072s] Invoked command in '/home/zenix/ros2_ws/src/map_generator/build/map_generator' returned '0': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --install /home/zenix/ros2_ws/src/map_generator/build/map_generator
