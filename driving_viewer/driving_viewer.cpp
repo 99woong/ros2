@@ -22,8 +22,8 @@ using json = nlohmann::json;
 
 #define AMR_COUNT 1
 
-// const std::string SERVER_ADDRESS("tcp://localhost:1883");
-const std::string SERVER_ADDRESS("tcp://192.168.56.102:1883");
+const std::string SERVER_ADDRESS("tcp://localhost:1883");
+// const std::string SERVER_ADDRESS("tcp://192.168.56.102:1883");
 const std::string CLIENT_ID("fms_client");
 
 const int QOS = 1;
@@ -243,8 +243,7 @@ public:
         {
             // std::cout << "recv visualzation : " << i  << " " << payload <<  std::endl;
 
-            // if (topic == VISUALIZATION_TOPICS[i])
-            if (0)
+            if (topic == VISUALIZATION_TOPICS[i])
             {
                 // std::cout << "[MQTT] Visualization message arrived for amr_" << i << std::endl;
                 try
@@ -416,38 +415,38 @@ int main(int argc, char* argv[])
             std::cout << "Factsheet request message published!" << std::endl;
         }
 
-        for (int i = 0; i < AMR_COUNT; ++i)
-        {
-            std::string order_topic = "vda5050/agvs/amr_" + std::to_string(i) + "/order";
+        // for (int i = 0; i < AMR_COUNT; ++i)
+        // {
+        //     std::string order_topic = "vda5050/agvs/amr_" + std::to_string(i) + "/order";
 
-            std::string payload = createOrderPayloadForAmr(i);
-            std::cout << "[DEBUG] Payload for AMR " << i << ": " << payload << std::endl;
+        //     std::string payload = createOrderPayloadForAmr(i);
+        //     std::cout << "[DEBUG] Payload for AMR " << i << ": " << payload << std::endl;
 
-            try
-            {
-                auto order_msg = mqtt::make_message(order_topic, payload);
-                order_msg->set_qos(QOS);
-                // auto token = client.publish(order_msg)->wait();
-                auto token = client.publish(order_msg);
-                token->wait();
-                if (!token->is_complete()) 
-                {
-                    std::cerr << "[ERROR] MQTT publish not complete for topic: " << order_topic << std::endl;   
-                }
-            }
-            catch(const std::exception& e)
-            {
-                std::cerr << "[EXCEPTION] MQTT publish error for topic: " << order_topic << " - " << e.what() << std::endl;
-            }
+        //     try
+        //     {
+        //         auto order_msg = mqtt::make_message(order_topic, payload);
+        //         order_msg->set_qos(QOS);
+        //         // auto token = client.publish(order_msg)->wait();
+        //         auto token = client.publish(order_msg);
+        //         token->wait();
+        //         if (!token->is_complete()) 
+        //         {
+        //             std::cerr << "[ERROR] MQTT publish not complete for topic: " << order_topic << std::endl;   
+        //         }
+        //     }
+        //     catch(const std::exception& e)
+        //     {
+        //         std::cerr << "[EXCEPTION] MQTT publish error for topic: " << order_topic << " - " << e.what() << std::endl;
+        //     }
             
-            // sleep(1);
+        //     // sleep(1);
 
-            // RViz 경로 Marker publish
-            // publishOrderEdgesAsLines(payload, edge_marker_pub, node);
+        //     // RViz 경로 Marker publish
+        //     publishOrderEdgesAsLines(payload, edge_marker_pub, node);
 
 
-            std::cout << "Published order message to topic: " << order_topic << std::endl;
-        }
+        //     std::cout << "Published order message to topic: " << order_topic << std::endl;
+        // }
 
         // 충분히 메시지 수신 대기
         std::cout << "Waiting for state messages for 10 seconds..." << std::endl;
