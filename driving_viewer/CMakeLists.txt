@@ -15,6 +15,7 @@ find_package(nlohmann_json REQUIRED)
 find_package(Threads REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(ament_index_cpp REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 # MQTT 라이브러리
 find_library(PAHO_MQTT_CPP_LIB paho-mqttpp3)
@@ -37,12 +38,14 @@ ament_target_dependencies(driving_viewer
   nlohmann_json
   visualization_msgs
   ament_index_cpp
+  yaml-cpp   
 )
 
 target_link_libraries(driving_viewer
   ${PAHO_MQTT_CPP_LIB}
   ${PAHO_MQTT_C_LIB}
   Threads::Threads
+  yaml-cpp 
 )
 
 # 🔥 설치 대상 꼭 설정해야 ros2 run 가능

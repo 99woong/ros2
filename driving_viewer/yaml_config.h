@@ -28,6 +28,11 @@ struct BatteryParams
     double acceleration_factor;
 };
 
+struct Mqtt
+{
+    std::string server_address;
+};
+
 struct AmrConfig 
 {
     int amr_count;
@@ -41,6 +46,7 @@ struct AmrConfig
     double control_period = 0.01;
     AmrParams amr_params;
     BatteryParams battery_params;
+    Mqtt mqtt;
 };
 
 class YamlConfig 

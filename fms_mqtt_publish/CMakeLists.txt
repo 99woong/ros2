@@ -15,6 +15,7 @@ find_package(nlohmann_json REQUIRED)
 find_package(Threads REQUIRED)
 find_package(visualization_msgs REQUIRED)
 find_package(ament_index_cpp REQUIRED)
+find_package(yaml-cpp REQUIRED)
 
 # MQTT 라이브러리
 find_library(PAHO_MQTT_CPP_LIB paho-mqttpp3)

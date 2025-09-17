@@ -11,6 +11,8 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <yaml-cpp/yaml.h>
+#include <fstream>
 #include <fstream>
 #include <sstream>
 
@@ -22,8 +24,8 @@ using json = nlohmann::json;
 
 #define AMR_COUNT 1
 
-// const std::string SERVER_ADDRESS("tcp://localhost:1883");
-const std::string SERVER_ADDRESS("tcp://192.168.56.102:1883");
+const std::string SERVER_ADDRESS("tcp://localhost:1883");
+// const std::string SERVER_ADDRESS("tcp://192.168.56.102:1883");
 const std::string CLIENT_ID("fms_client");
 
 const int QOS = 1;
@@ -358,6 +360,7 @@ std::string createOrderPayloadForAmr(int amr_idx)
 int main(int argc, char* argv[])
 {
     rclcpp::init(argc, argv);
+
     auto node = rclcpp::Node::make_shared("fms_mqtt_publish");
     auto pose_pub = node->create_publisher<geometry_msgs::msg::PoseStamped>("pose", 10);
     auto edge_marker_pub = node->create_publisher<visualization_msgs::msg::Marker>("fms_order_edges_marker", 10);

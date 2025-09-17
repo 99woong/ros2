@@ -11,6 +11,7 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
 #include <ament_index_cpp/get_package_share_directory.hpp>
+#include <yaml-cpp/yaml.h>
 #include <fstream>
 #include <sstream>
 
@@ -24,11 +25,11 @@ using json = nlohmann::json;
 
 const std::string SERVER_ADDRESS("tcp://localhost:1883");
 // const std::string SERVER_ADDRESS("tcp://192.168.56.102:1883");
-const std::string CLIENT_ID("fms_client");
+const std::string CLIENT_ID("driving_viewer");
 
 const int QOS = 1;
 
-const std::string FACTS_TOPIC = "vda5050/agvs/amr_0/instantActions";
+// const std::string FACTS_TOPIC = "vda5050/agvs/amr_0/instantActions";
 
 const std::string FACTSHEET_REQUEST_INSTANT_ACTION = R"({
     "headerId": "factsheet_request_1",
@@ -45,7 +46,7 @@ const std::string FACTSHEET_REQUEST_INSTANT_ACTION = R"({
 })";
 
 std::vector<std::string> VISUALIZATION_TOPICS;
-std::vector<std::string> ORDER_TOPICS;
+// std::vector<std::string> ORDER_TOPICS;
 
 struct NodeInfo 
 {
@@ -58,8 +59,23 @@ struct NodeInfo
     NodeInfo() : sequenceId(0), x(0), y(0), theta(0) {}
 };
 
-bool initialized = false;
 
+std::string loadMqttServerAddress(const std::string& yaml_path)
+{
+    try {
+        YAML::Node config = YAML::LoadFile(yaml_path);
+        if (config["mqtt"] && config["mqtt"]["server_address"]) {
+            return config["mqtt"]["server_address"].as<std::string>();
+        }
+        std::cerr << "[ERROR] MQTT server_address not found in: " << yaml_path << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "[ERROR] Failed to load YAML file: " << e.what() << std::endl;
+    }
+    // 기본값 fallback
+    return "tcp://localhost:1883";
+}
+
+bool initialized = false;
 void publishOrderEdgesAsLines(const std::string& payload,
                              rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub,
                              rclcpp::Node::SharedPtr node)
@@ -241,11 +257,8 @@ public:
 
         for (size_t i = 0; i < AMR_COUNT; ++i)
         {
-            // std::cout << "recv visualzation : " << i  << " " << payload <<  std::endl;
-
             if (topic == VISUALIZATION_TOPICS[i])
             {
-                // std::cout << "[MQTT] Visualization message arrived for amr_" << i << std::endl;
                 try
                 {
                     auto j = json::parse(payload);
@@ -284,7 +297,8 @@ public:
             }
         }
 
-        if (topic == FACTS_TOPIC && !factsheet_received_)
+        // if (topic == FACTS_TOPIC && !factsheet_received_)
+        if (0)
         {
             std::cout << "[MQTT] Factsheet message arrived\n";
             try
@@ -357,6 +371,13 @@ std::string createOrderPayloadForAmr(int amr_idx)
 int main(int argc, char* argv[])
 {
     rclcpp::init(argc, argv);
+    std::string config_path;
+    if (argc > 1)
+        config_path = argv[1];
+
+    std::string server_address = loadMqttServerAddress(config_path);
+    std::cout << "MQTT server address: " << server_address << std::endl;
+
     auto node = rclcpp::Node::make_shared("fms_mqtt_publish");
     auto pose_pub = node->create_publisher<geometry_msgs::msg::PoseStamped>("pose", 10);
     auto edge_marker_pub = node->create_publisher<visualization_msgs::msg::Marker>("fms_order_edges_marker", 10);
@@ -364,14 +385,14 @@ int main(int argc, char* argv[])
     for(int i = 0; i < AMR_COUNT; ++i) 
     {
         VISUALIZATION_TOPICS.push_back("vda5050/agvs/amr_" + std::to_string(i) + "/visualization");
-        ORDER_TOPICS.push_back("vda5050/agvs/amr_" + std::to_string(i) + "/order");
+        // ORDER_TOPICS.push_back("vda5050/agvs/amr_" + std::to_string(i) + "/order");
     }
 
     // 확인용 출력
     for(const auto& topic : VISUALIZATION_TOPICS)
         std::cout << topic << std::endl;
-    for(const auto& topic : ORDER_TOPICS)
-        std::cout << topic << std::endl;
+    // for(const auto& topic : ORDER_TOPICS)
+    //     std::cout << topic << std::endl;
 
     
     std::vector<rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr> marker_pubs;
@@ -382,7 +403,8 @@ int main(int argc, char* argv[])
         marker_pubs.push_back(node->create_publisher<visualization_msgs::msg::Marker>(marker_topic, 10));
     }
 
-    mqtt::async_client client(SERVER_ADDRESS, CLIENT_ID);
+    // mqtt::async_client client(SERVER_ADDRESS, CLIENT_ID);
+    mqtt::async_client client(server_address, CLIENT_ID);
     mqtt::connect_options connOpts;
     connOpts.set_clean_session(true);
 
@@ -407,6 +429,7 @@ int main(int argc, char* argv[])
         }
 
         // Factsheet 요청 instantAction 메시지 발행 (amr_0만 예시)
+        if(0)
         {
             std::cout << "Publishing factsheet request instantAction message..." << std::endl;
             auto instant_msg = mqtt::make_message("vda5050/agvs/amr_0/instantActions", FACTSHEET_REQUEST_INSTANT_ACTION);
