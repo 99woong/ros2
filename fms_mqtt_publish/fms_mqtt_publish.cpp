@@ -31,6 +31,8 @@ const std::string CLIENT_ID("fms_client");
 const int QOS = 1;
 
 const std::string FACTS_TOPIC = "vda5050/agvs/amr_0/instantActions";
+const std::string STATE_TOPIC = "vda5050/agvs/amr_0/state";
+const std::string CONNECTION_TOPIC = "vda5050/agvs/amr_0/connection";
 
 const std::string FACTSHEET_REQUEST_INSTANT_ACTION = R"({
     "headerId": "factsheet_request_1",
@@ -286,10 +288,21 @@ public:
                 }
             }
         }
+        
+        if(topic == STATE_TOPIC)
+        {
+            std::cout << "recv State_TOPIC : " << payload <<  std::endl;
+        }
+
+        if (topic == CONNECTION_TOPIC)
+        {
+            std::cout << "recv CONNECTION_TOPIC : " << payload <<  std::endl;
+        }
 
         if (topic == FACTS_TOPIC && !factsheet_received_)
         {
-            std::cout << "[MQTT] Factsheet message arrived\n";
+            std::cout << "recv FACTS_TOPIC : " << payload <<  std::endl;
+            // std::cout << "[MQTT] Factsheet message arrived\n";
             try
             {
                 auto j = json::parse(payload);
@@ -330,6 +343,7 @@ private:
     std::vector<visualization_msgs::msg::Marker> initialized_markers_;
     rclcpp::Node::SharedPtr node_;
     bool factsheet_received_;
+    bool connection_received_;
 };
 
 std::string readJsonFile(const std::string& file_path)
@@ -351,8 +365,6 @@ std::string createOrderPayloadForAmr(int amr_idx)
     std::string package_share_directory = ament_index_cpp::get_package_share_directory("map_generator");
     std::string file_path = package_share_directory + "/maps/amr_" + std::to_string(amr_idx) + "_order_arc.json";
 
-    // std::string file_path = "../map_generator/maps/amr_" + std::to_string(amr_idx) + "_order_arc.json";
-    // std::string file_path = "/home/zenix/ros2_ws/src/map_generator/maps/amr_" + std::to_string(amr_idx) + "_order_arc.json";
     return readJsonFile(file_path);
 }
 
@@ -410,6 +422,7 @@ int main(int argc, char* argv[])
             std::cout << "Subscribed to topic: " << topic_filter << std::endl;
         }
 
+        if(0)
         // Factsheet 요청 instantAction 메시지 발행 (amr_0만 예시)
         {
             std::cout << "Publishing factsheet request instantAction message..." << std::endl;
@@ -443,10 +456,10 @@ int main(int argc, char* argv[])
                 std::cerr << "[EXCEPTION] MQTT publish error for topic: " << order_topic << " - " << e.what() << std::endl;
             }
             
-            // sleep(1);
+            sleep(1);
 
             // RViz 경로 Marker publish
-            // publishOrderEdgesAsLines(payload, edge_marker_pub, node);
+            publishOrderEdgesAsLines(payload, edge_marker_pub, node);
 
 
             std::cout << "Published order message to topic: " << order_topic << std::endl;

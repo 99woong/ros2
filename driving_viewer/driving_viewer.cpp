@@ -29,7 +29,7 @@ const std::string CLIENT_ID("driving_viewer");
 
 const int QOS = 1;
 
-// const std::string FACTS_TOPIC = "vda5050/agvs/amr_0/instantActions";
+const std::string FACTS_TOPIC = "vda5050/agvs/amr_0/instantActions";
 
 const std::string FACTSHEET_REQUEST_INSTANT_ACTION = R"({
     "headerId": "factsheet_request_1",
@@ -202,7 +202,7 @@ void publishOrderEdgesAsLines(const std::string& payload,
             p_end.z = 0.0;
 
 
-            std::cout << " line coord : " << p_start.x << ", " << p_start.y << " " << p_end.x << " " << p_end.y << std::endl;
+            // std::cout << " line coord : " << p_start.x << ", " << p_start.y << " " << p_end.x << " " << p_end.y << std::endl;
 
             line_marker.header.frame_id = "map";
             line_marker.ns = "fms_order_edges";
@@ -262,7 +262,7 @@ public:
                 try
                 {
                     auto j = json::parse(payload);
-                    auto pose_json = j.at("pose");
+                    auto pose_json = j.at("agvPosition");
                     double x = pose_json.at("x").get<double>();
                     double y = pose_json.at("y").get<double>();
                     double theta = pose_json.at("theta").get<double>();
@@ -284,9 +284,9 @@ public:
                     marker_msg.header.stamp = node_->get_clock()->now();
                     marker_msg.pose = pose.pose;
 
-                    marker_msg.scale.x = AMR_SIZE_X;
-                    marker_msg.scale.y = AMR_SIZE_Y;
-                    marker_msg.scale.z = AMR_SIZE_Z;
+                    // marker_msg.scale.x = AMR_SIZE_X;
+                    // marker_msg.scale.y = AMR_SIZE_Y;
+                    // marker_msg.scale.z = AMR_SIZE_Z;
 
                     marker_pubs_[i]->publish(marker_msg);
                 }
@@ -297,10 +297,9 @@ public:
             }
         }
 
-        // if (topic == FACTS_TOPIC && !factsheet_received_)
-        if (0)
+        if (topic == FACTS_TOPIC && !factsheet_received_)
         {
-            std::cout << "[MQTT] Factsheet message arrived\n";
+            std::cout << "recv FACTS_TOPIC : " << payload <<  std::endl;
             try
             {
                 auto j = json::parse(payload);
@@ -314,6 +313,8 @@ public:
                 marker_msg.scale.x = length;
                 marker_msg.scale.y = width;
                 marker_msg.scale.z = height;
+
+                std::cout << "x: " << marker_msg.scale.x << " " << "y: " << marker_msg.scale.y << "z: " << marker_msg.scale.z << std::endl;
 
                 marker_msg.pose.position.z = height / 2.0;
 
@@ -429,7 +430,7 @@ int main(int argc, char* argv[])
         }
 
         // Factsheet 요청 instantAction 메시지 발행 (amr_0만 예시)
-        if(0)
+        if(1)
         {
             std::cout << "Publishing factsheet request instantAction message..." << std::endl;
             auto instant_msg = mqtt::make_message("vda5050/agvs/amr_0/instantActions", FACTSHEET_REQUEST_INSTANT_ACTION);
