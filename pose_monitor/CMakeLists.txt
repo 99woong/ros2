@@ -1,0 +1,45 @@
+cmake_minimum_required(VERSION 3.8)
+project(pose_monitor)
+
+if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  add_compile_options(-Wall -Wextra -Wpedantic)
+endif()
+
+# Find dependencies
+find_package(ament_cmake REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_package(OpenCV REQUIRED)
+
+# Add executable
+add_executable(pose_monitor_node src/pose_monitor_node.cpp)
+
+ament_target_dependencies(pose_monitor_node
+  rclcpp
+  geometry_msgs
+  std_msgs
+  tf2
+  tf2_geometry_msgs
+  cv_bridge
+)
+
+target_link_libraries(pose_monitor_node
+  ${OpenCV_LIBRARIES}
+)
+
+# Install targets
+install(TARGETS
+  pose_monitor_node
+  DESTINATION lib/${PROJECT_NAME}
+)
+
+if(BUILD_TESTING)
+  find_package(ament_lint_auto REQUIRED)
+  ament_lint_auto_find_test_dependencies()
+endif()
+
+ament_package()
