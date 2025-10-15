@@ -1,0 +1,8 @@
+[01m[K/home/zenix/git/ros2/pose_monitor/src/pose_monitor_node.cpp:[m[K In member function ‘[01m[Kvoid PoseMonitor::[01;32m[KsaveToCSV[m[K()[m[K’:
+[01m[K/home/zenix/git/ros2/pose_monitor/src/pose_monitor_node.cpp:191:36:[m[K [01;35m[Kwarning: [m[Kcomparison of integer expressions of different signedness: ‘[01m[Kstd::deque<std::__cxx11::basic_string<char> >::size_type[m[K’ {aka ‘[01m[Klong unsigned int[m[K’} and ‘[01m[Kconst int[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wsign-compare-Wsign-compare]8;;[m[K]
+  191 |         while ([01;35m[Klog_history_.size() > MAX_LOG_LINES[m[K) {
+      |                [01;35m[K~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~[m[K
+[01m[K/home/zenix/git/ros2/pose_monitor/src/pose_monitor_node.cpp:[m[K In static member function ‘[01m[Kstatic void PoseMonitor::[01;32m[KmouseCallback[m[K(int, int, int, int, void*)[m[K’:
+[01m[K/home/zenix/git/ros2/pose_monitor/src/pose_monitor_node.cpp:198:60:[m[K [01;35m[Kwarning: [m[Kunused parameter ‘[01m[Kflags[m[K’ [[01;35m[K]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter-Wunused-parameter]8;;[m[K]
+  198 |     static void mouseCallback(int event, int x, int y, [01;35m[Kint flags[m[K, void* userdata) {
+      |                                                        [01;35m[K~~~~^~~~~[m[K

@@ -1,0 +1,277 @@
+[0.000000] (-) TimerEvent: {}
+[0.001320] (-) JobUnselected: {'identifier': 'VDA5050MapEditor'}
+[0.001531] (-) JobUnselected: {'identifier': 'driving_viewer'}
+[0.001624] (-) JobUnselected: {'identifier': 'fms_mqtt_publish'}
+[0.001670] (-) JobUnselected: {'identifier': 'gls100_ros2'}
+[0.001710] (-) JobUnselected: {'identifier': 'map_generator'}
+[0.001749] (-) JobUnselected: {'identifier': 'vloc_receiver'}
+[0.001804] (pose_monitor) JobQueued: {'identifier': 'pose_monitor', 'dependencies': OrderedDict()}
+[0.001864] (pose_monitor) JobStarted: {'identifier': 'pose_monitor'}
+[0.015833] (pose_monitor) JobProgress: {'identifier': 'pose_monitor', 'progress': 'cmake'}
+[0.017429] (pose_monitor) Command: {'cmd': ['/usr/bin/cmake', '/home/zenix/git/ros2/pose_monitor', '-DCMAKE_INSTALL_PREFIX=/home/zenix/git/ros2/install/pose_monitor'], 'cwd': '/home/zenix/git/ros2/build/pose_monitor', 'env': OrderedDict({'LESSOPEN': '| /usr/bin/lesspipe %s', 'LANGUAGE': 'ko_KR.UTF-8', 'USER': 'zenix', 'LC_TIME': 'en_US.UTF-8', 'GZ_CONFIG_PATH': '/opt/ros/jazzy/opt/gz_sim_vendor/share/gz:/opt/ros/jazzy/opt/sdformat_vendor/share/gz:/opt/ros/jazzy/opt/gz_gui_vendor/share/gz:/opt/ros/jazzy/opt/gz_transport_vendor/share/gz:/opt/ros/jazzy/opt/gz_rendering_vendor/share/gz:/opt/ros/jazzy/opt/gz_plugin_vendor/share/gz:/opt/ros/jazzy/opt/gz_fuel_tools_vendor/share/gz:/opt/ros/jazzy/opt/gz_msgs_vendor/share/gz:/opt/ros/jazzy/opt/gz_common_vendor/share/gz', 'XDG_SESSION_TYPE': 'wayland', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/home/zenix/ros2_ws/install/turtlesim/lib:/opt/ros/jazzy/opt/gz_sim_vendor/lib:/opt/ros/jazzy/opt/gz_sensors_vendor/lib:/opt/ros/jazzy/opt/gz_physics_vendor/lib:/opt/ros/jazzy/opt/sdformat_vendor/lib:/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_gui_vendor/lib:/opt/ros/jazzy/opt/gz_transport_vendor/lib:/opt/ros/jazzy/opt/gz_rendering_vendor/lib:/opt/ros/jazzy/opt/gz_plugin_vendor/lib:/opt/ros/jazzy/opt/gz_fuel_tools_vendor/lib:/opt/ros/jazzy/opt/gz_msgs_vendor/lib:/opt/ros/jazzy/opt/gz_common_vendor/lib:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_tools_vendor/lib:/opt/ros/jazzy/opt/gz_ogre_next_vendor/lib:/opt/ros/jazzy/opt/gz_dartsim_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib', 'HOME': '/home/zenix', 'OLDPWD': '/home/zenix/git', 'DESKTOP_SESSION': 'ubuntu', 'ROS_PYTHON_VERSION': '3', 'GNOME_SHELL_SESSION_MODE': 'ubuntu', 'GTK_MODULES': 'gail:atk-bridge', 'LC_MONETARY': 'en_US.UTF-8', 'MANAGERPID': '4030', 'SYSTEMD_EXEC_PID': '4552', 'GSM_SKIP_SSH_AGENT_WORKAROUND': 'true', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'COLORTERM': 'truecolor', 'TERMINATOR_DBUS_NAME': 'net.tenshu.Terminator25ef4b219e3b005583550f2b0f9f990c3', 'GIO_LAUNCHED_DESKTOP_FILE_PID': '7904', 'GNOME_KEYRING_CONTROL': '/run/user/1000/keyring', 'DEBUGINFOD_URLS': 'https://debuginfod.ubuntu.com', 'IM_CONFIG_PHASE': '1', 'WAYLAND_DISPLAY': 'wayland-0', 'COLCON_PREFIX_PATH': '/home/zenix/ros2_ws/install', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'zenix', 'JOURNAL_STREAM': '9:39014', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'MEMORY_PRESSURE_WATCH': '/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/session.slice/org.gnome.SettingsDaemon.MediaKeys.service/memory.pressure', 'XDG_SESSION_CLASS': 'user', 'USERNAME': 'zenix', 'TERM': 'xterm-256color', 'GNOME_DESKTOP_SESSION_ID': 'this-is-deprecated', 'PATH': '/opt/ros/jazzy/opt/gz_msgs_vendor/bin:/opt/ros/jazzy/opt/gz_tools_vendor/bin:/opt/ros/jazzy/opt/gz_ogre_next_vendor/bin:/opt/ros/jazzy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin', 'SESSION_MANAGER': 'local/zenix-16Z90S-GA5CK:@/tmp/.ICE-unix/4279,unix/zenix-16Z90S-GA5CK:/tmp/.ICE-unix/4279', 'INVOCATION_ID': '683510c6c71145ccb535950c697a41f5', 'PAPERSIZE': 'letter', 'XDG_MENU_PREFIX': 'gnome-', 'LC_ADDRESS': 'en_US.UTF-8', 'GNOME_SETUP_DISPLAY': ':1', 'XDG_RUNTIME_DIR': '/run/user/1000', 'DISPLAY': ':0', 'TERMINATOR_DBUS_PATH': '/net/tenshu/Terminator2', 'LANG': 'ko_KR.UTF-8', 'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME', 'LC_TELEPHONE': 'en_US.UTF-8', 'XMODIFIERS': '@im=ibus', 'XDG_SESSION_DESKTOP': 'ubuntu', 'XAUTHORITY': '/run/user/1000/.mutter-Xwaylandauth.N8L5D3', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:', 'SSH_AUTH_SOCK': '/run/user/1000/keyring/ssh', 'ROS_DOMAIN_ID': '11', 'AMENT_PREFIX_PATH': '/home/zenix/ros2_ws/install/vloc_receiver:/home/zenix/ros2_ws/install/pose_monitor:/home/zenix/ros2_ws/install/gls100_ros2:/home/zenix/ros2_ws/install/turtlesim:/home/zenix/ros2_ws/install/fms_mqtt_publish:/opt/ros/jazzy', 'SHELL': '/bin/bash', 'LC_NAME': 'en_US.UTF-8', 'TERMINATOR_UUID': 'urn:uuid:6747ebdd-39d7-41e7-af2e-9f5328000519', 'QT_ACCESSIBILITY': '1', 'GDMSESSION': 'ubuntu', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'en_US.UTF-8', 'LC_IDENTIFICATION': 'en_US.UTF-8', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'QT_IM_MODULE': 'ibus', 'PWD': '/home/zenix/git/ros2/build/pose_monitor', 'LC_ALL': 'en_US.UTF-8', 'XDG_CONFIG_DIRS': '/etc/xdg/xdg-ubuntu:/etc/xdg', 'XDG_DATA_DIRS': '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop', 'QTWEBENGINE_DICTIONARIES_PATH': '/usr/share/hunspell-bdic/', 'PYTHONPATH': '/home/zenix/ros2_ws/install/turtlesim/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'LC_NUMERIC': 'en_US.UTF-8', 'LC_PAPER': 'en_US.UTF-8', 'COLCON': '1', 'MEMORY_PRESSURE_WRITE': 'c29tZSAyMDAwMDAgMjAwMDAwMAA=', 'VTE_VERSION': '7600', 'CMAKE_PREFIX_PATH': '/home/zenix/ros2_ws/install/vloc_receiver:/home/zenix/ros2_ws/install/pose_monitor:/home/zenix/ros2_ws/install/gls100_ros2:/home/zenix/ros2_ws/install/turtlesim:/opt/ros/jazzy:/home/zenix/ros2_ws/install/fms_mqtt_publish:/opt/ros/jazzy/opt/gz_sim_vendor:/opt/ros/jazzy/opt/gz_sensors_vendor:/opt/ros/jazzy/opt/gz_physics_vendor:/opt/ros/jazzy/opt/sdformat_vendor:/opt/ros/jazzy/opt/gz_gui_vendor:/opt/ros/jazzy/opt/gz_transport_vendor:/opt/ros/jazzy/opt/gz_rendering_vendor:/opt/ros/jazzy/opt/gz_plugin_vendor:/opt/ros/jazzy/opt/gz_fuel_tools_vendor:/opt/ros/jazzy/opt/gz_msgs_vendor:/opt/ros/jazzy/opt/gz_common_vendor:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_tools_vendor:/opt/ros/jazzy/opt/gz_ogre_next_vendor:/opt/ros/jazzy/opt/gz_dartsim_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor'}), 'shell': False}
+[0.099469] (-) TimerEvent: {}
+[0.130532] (pose_monitor) StdoutLine: {'line': b'-- The C compiler identification is GNU 13.3.0\n'}
+[0.199662] (-) TimerEvent: {}
+[0.224597] (pose_monitor) StdoutLine: {'line': b'-- The CXX compiler identification is GNU 13.3.0\n'}
+[0.263830] (pose_monitor) StdoutLine: {'line': b'-- Detecting C compiler ABI info\n'}
+[0.299887] (-) TimerEvent: {}
+[0.400502] (-) TimerEvent: {}
+[0.447022] (pose_monitor) StdoutLine: {'line': b'-- Detecting C compiler ABI info - done\n'}
+[0.470464] (pose_monitor) StdoutLine: {'line': b'-- Check for working C compiler: /usr/bin/cc - skipped\n'}
+[0.471100] (pose_monitor) StdoutLine: {'line': b'-- Detecting C compile features\n'}
+[0.471529] (pose_monitor) StdoutLine: {'line': b'-- Detecting C compile features - done\n'}
+[0.486607] (pose_monitor) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info\n'}
+[0.500707] (-) TimerEvent: {}
+[0.601256] (-) TimerEvent: {}
+[0.658896] (pose_monitor) StdoutLine: {'line': b'-- Detecting CXX compiler ABI info - done\n'}
+[0.671128] (pose_monitor) StdoutLine: {'line': b'-- Check for working CXX compiler: /usr/bin/c++ - skipped\n'}
+[0.671657] (pose_monitor) StdoutLine: {'line': b'-- Detecting CXX compile features\n'}
+[0.672110] (pose_monitor) StdoutLine: {'line': b'-- Detecting CXX compile features - done\n'}
+[0.675784] (pose_monitor) StdoutLine: {'line': b'-- Found ament_cmake: 2.5.4 (/opt/ros/jazzy/share/ament_cmake/cmake)\n'}
+[0.701321] (-) TimerEvent: {}
+[0.801639] (-) TimerEvent: {}
+[0.902091] (-) TimerEvent: {}
+[0.937761] (pose_monitor) StdoutLine: {'line': b'-- Found Python3: /usr/bin/python3 (found version "3.12.3") found components: Interpreter \n'}
+[1.002239] (-) TimerEvent: {}
+[1.097280] (pose_monitor) StdoutLine: {'line': b'-- Found rclcpp: 28.1.10 (/opt/ros/jazzy/share/rclcpp/cmake)\n'}
+[1.102340] (-) TimerEvent: {}
+[1.154785] (pose_monitor) StdoutLine: {'line': b'-- Found rosidl_generator_c: 4.6.5 (/opt/ros/jazzy/share/rosidl_generator_c/cmake)\n'}
+[1.172374] (pose_monitor) StdoutLine: {'line': b'-- Found rosidl_generator_cpp: 4.6.5 (/opt/ros/jazzy/share/rosidl_generator_cpp/cmake)\n'}
+[1.193269] (pose_monitor) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_c: rosidl_typesupport_fastrtps_c;rosidl_typesupport_introspection_c\n'}
+[1.202425] (-) TimerEvent: {}
+[1.217158] (pose_monitor) StdoutLine: {'line': b'-- Using all available rosidl_typesupport_cpp: rosidl_typesupport_fastrtps_cpp;rosidl_typesupport_introspection_cpp\n'}
+[1.302603] (-) TimerEvent: {}
+[1.320785] (pose_monitor) StdoutLine: {'line': b'-- Found rmw_implementation_cmake: 7.3.2 (/opt/ros/jazzy/share/rmw_implementation_cmake/cmake)\n'}
+[1.324702] (pose_monitor) StdoutLine: {'line': b'-- Found rmw_fastrtps_cpp: 8.4.2 (/opt/ros/jazzy/share/rmw_fastrtps_cpp/cmake)\n'}
+[1.402737] (-) TimerEvent: {}
+[1.479783] (pose_monitor) StdoutLine: {'line': b'-- Found OpenSSL: /usr/lib/x86_64-linux-gnu/libcrypto.so (found version "3.0.13")  \n'}
+[1.502853] (-) TimerEvent: {}
+[1.512853] (pose_monitor) StdoutLine: {'line': b'-- Found FastRTPS: /opt/ros/jazzy/include (Required is at least version "2.13") \n'}
+[1.552599] (pose_monitor) StdoutLine: {'line': b"-- Using RMW implementation 'rmw_fastrtps_cpp' as default\n"}
+[1.602989] (-) TimerEvent: {}
+[1.657963] (pose_monitor) StdoutLine: {'line': b'-- Found geometry_msgs: 5.3.6 (/opt/ros/jazzy/share/geometry_msgs/cmake)\n'}
+[1.703122] (-) TimerEvent: {}
+[1.704482] (pose_monitor) StdoutLine: {'line': b'-- Found tf2: 0.36.12 (/opt/ros/jazzy/share/tf2/cmake)\n'}
+[1.711371] (pose_monitor) StdoutLine: {'line': b'-- Found tf2_geometry_msgs: 0.36.12 (/opt/ros/jazzy/share/tf2_geometry_msgs/cmake)\n'}
+[1.738026] (pose_monitor) StdoutLine: {'line': b'-- Found eigen3_cmake_module: 0.3.0 (/opt/ros/jazzy/share/eigen3_cmake_module/cmake)\n'}
+[1.740073] (pose_monitor) StdoutLine: {'line': b'-- Found Eigen3: TRUE (found version "3.4.0") \n'}
+[1.740339] (pose_monitor) StdoutLine: {'line': b'-- Ensuring Eigen3 include directory is part of orocos-kdl CMake target\n'}
+[1.803230] (-) TimerEvent: {}
+[1.903624] (-) TimerEvent: {}
+[1.926430] (pose_monitor) StdoutLine: {'line': b'-- Found cv_bridge: 4.1.0 (/opt/ros/jazzy/share/cv_bridge/cmake)\n'}
+[1.987050] (pose_monitor) StdoutLine: {'line': b'-- Found OpenCV: /usr (found version "4.6.0") \n'}
+[1.991996] (pose_monitor) StdoutLine: {'line': b'-- Found ament_lint_auto: 0.17.2 (/opt/ros/jazzy/share/ament_lint_auto/cmake)\n'}
+[2.003729] (-) TimerEvent: {}
+[2.104178] (-) TimerEvent: {}
+[2.150374] (pose_monitor) StdoutLine: {'line': b"-- Added test 'copyright' to check source files copyright and LICENSE\n"}
+[2.151791] (pose_monitor) StdoutLine: {'line': b"-- Added test 'cppcheck' to perform static code analysis on C / C++ code\n"}
+[2.152323] (pose_monitor) StdoutLine: {'line': b'-- Configured cppcheck include dirs: \n'}
+[2.152643] (pose_monitor) StdoutLine: {'line': b'-- Configured cppcheck exclude dirs and/or files: \n'}
+[2.153038] (pose_monitor) StdoutLine: {'line': b"-- Added test 'cpplint' to check C / C++ code against the Google style\n"}
+[2.153563] (pose_monitor) StdoutLine: {'line': b'-- Configured cpplint exclude dirs and/or files: \n'}
+[2.154011] (pose_monitor) StdoutLine: {'line': b"-- Added test 'lint_cmake' to check CMake code style\n"}
+[2.155074] (pose_monitor) StdoutLine: {'line': b"-- Added test 'uncrustify' to check C / C++ code style\n"}
+[2.155251] (pose_monitor) StdoutLine: {'line': b'-- Configured uncrustify additional arguments: \n'}
+[2.155847] (pose_monitor) StdoutLine: {'line': b"-- Added test 'xmllint' to check XML markup files\n"}
+[2.157903] (pose_monitor) StdoutLine: {'line': b'-- Configuring done (2.1s)\n'}
+[2.182369] (pose_monitor) StdoutLine: {'line': b'-- Generating done (0.0s)\n'}
+[2.188705] (pose_monitor) StdoutLine: {'line': b'-- Build files have been written to: /home/zenix/git/ros2/build/pose_monitor\n'}
+[2.204262] (-) TimerEvent: {}
+[2.212034] (pose_monitor) CommandEnded: {'returncode': 0}
+[2.212854] (pose_monitor) JobProgress: {'identifier': 'pose_monitor', 'progress': 'build'}
+[2.212887] (pose_monitor) Command: {'cmd': ['/usr/bin/cmake', '--build', '/home/zenix/git/ros2/build/pose_monitor', '--', '-j18', '-l18'], 'cwd': '/home/zenix/git/ros2/build/pose_monitor', 'env': OrderedDict({'LESSOPEN': '| /usr/bin/lesspipe %s', 'LANGUAGE': 'ko_KR.UTF-8', 'USER': 'zenix', 'LC_TIME': 'en_US.UTF-8', 'GZ_CONFIG_PATH': '/opt/ros/jazzy/opt/gz_sim_vendor/share/gz:/opt/ros/jazzy/opt/sdformat_vendor/share/gz:/opt/ros/jazzy/opt/gz_gui_vendor/share/gz:/opt/ros/jazzy/opt/gz_transport_vendor/share/gz:/opt/ros/jazzy/opt/gz_rendering_vendor/share/gz:/opt/ros/jazzy/opt/gz_plugin_vendor/share/gz:/opt/ros/jazzy/opt/gz_fuel_tools_vendor/share/gz:/opt/ros/jazzy/opt/gz_msgs_vendor/share/gz:/opt/ros/jazzy/opt/gz_common_vendor/share/gz', 'XDG_SESSION_TYPE': 'wayland', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/home/zenix/ros2_ws/install/turtlesim/lib:/opt/ros/jazzy/opt/gz_sim_vendor/lib:/opt/ros/jazzy/opt/gz_sensors_vendor/lib:/opt/ros/jazzy/opt/gz_physics_vendor/lib:/opt/ros/jazzy/opt/sdformat_vendor/lib:/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_gui_vendor/lib:/opt/ros/jazzy/opt/gz_transport_vendor/lib:/opt/ros/jazzy/opt/gz_rendering_vendor/lib:/opt/ros/jazzy/opt/gz_plugin_vendor/lib:/opt/ros/jazzy/opt/gz_fuel_tools_vendor/lib:/opt/ros/jazzy/opt/gz_msgs_vendor/lib:/opt/ros/jazzy/opt/gz_common_vendor/lib:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_tools_vendor/lib:/opt/ros/jazzy/opt/gz_ogre_next_vendor/lib:/opt/ros/jazzy/opt/gz_dartsim_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib', 'HOME': '/home/zenix', 'OLDPWD': '/home/zenix/git', 'DESKTOP_SESSION': 'ubuntu', 'ROS_PYTHON_VERSION': '3', 'GNOME_SHELL_SESSION_MODE': 'ubuntu', 'GTK_MODULES': 'gail:atk-bridge', 'LC_MONETARY': 'en_US.UTF-8', 'MANAGERPID': '4030', 'SYSTEMD_EXEC_PID': '4552', 'GSM_SKIP_SSH_AGENT_WORKAROUND': 'true', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'COLORTERM': 'truecolor', 'TERMINATOR_DBUS_NAME': 'net.tenshu.Terminator25ef4b219e3b005583550f2b0f9f990c3', 'GIO_LAUNCHED_DESKTOP_FILE_PID': '7904', 'GNOME_KEYRING_CONTROL': '/run/user/1000/keyring', 'DEBUGINFOD_URLS': 'https://debuginfod.ubuntu.com', 'IM_CONFIG_PHASE': '1', 'WAYLAND_DISPLAY': 'wayland-0', 'COLCON_PREFIX_PATH': '/home/zenix/ros2_ws/install', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'zenix', 'JOURNAL_STREAM': '9:39014', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'MEMORY_PRESSURE_WATCH': '/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/session.slice/org.gnome.SettingsDaemon.MediaKeys.service/memory.pressure', 'XDG_SESSION_CLASS': 'user', 'USERNAME': 'zenix', 'TERM': 'xterm-256color', 'GNOME_DESKTOP_SESSION_ID': 'this-is-deprecated', 'PATH': '/opt/ros/jazzy/opt/gz_msgs_vendor/bin:/opt/ros/jazzy/opt/gz_tools_vendor/bin:/opt/ros/jazzy/opt/gz_ogre_next_vendor/bin:/opt/ros/jazzy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin', 'SESSION_MANAGER': 'local/zenix-16Z90S-GA5CK:@/tmp/.ICE-unix/4279,unix/zenix-16Z90S-GA5CK:/tmp/.ICE-unix/4279', 'INVOCATION_ID': '683510c6c71145ccb535950c697a41f5', 'PAPERSIZE': 'letter', 'XDG_MENU_PREFIX': 'gnome-', 'LC_ADDRESS': 'en_US.UTF-8', 'GNOME_SETUP_DISPLAY': ':1', 'XDG_RUNTIME_DIR': '/run/user/1000', 'DISPLAY': ':0', 'TERMINATOR_DBUS_PATH': '/net/tenshu/Terminator2', 'LANG': 'ko_KR.UTF-8', 'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME', 'LC_TELEPHONE': 'en_US.UTF-8', 'XMODIFIERS': '@im=ibus', 'XDG_SESSION_DESKTOP': 'ubuntu', 'XAUTHORITY': '/run/user/1000/.mutter-Xwaylandauth.N8L5D3', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:', 'SSH_AUTH_SOCK': '/run/user/1000/keyring/ssh', 'ROS_DOMAIN_ID': '11', 'AMENT_PREFIX_PATH': '/home/zenix/ros2_ws/install/vloc_receiver:/home/zenix/ros2_ws/install/pose_monitor:/home/zenix/ros2_ws/install/gls100_ros2:/home/zenix/ros2_ws/install/turtlesim:/home/zenix/ros2_ws/install/fms_mqtt_publish:/opt/ros/jazzy', 'SHELL': '/bin/bash', 'LC_NAME': 'en_US.UTF-8', 'TERMINATOR_UUID': 'urn:uuid:6747ebdd-39d7-41e7-af2e-9f5328000519', 'QT_ACCESSIBILITY': '1', 'GDMSESSION': 'ubuntu', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'en_US.UTF-8', 'LC_IDENTIFICATION': 'en_US.UTF-8', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'QT_IM_MODULE': 'ibus', 'PWD': '/home/zenix/git/ros2/build/pose_monitor', 'LC_ALL': 'en_US.UTF-8', 'XDG_CONFIG_DIRS': '/etc/xdg/xdg-ubuntu:/etc/xdg', 'XDG_DATA_DIRS': '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop', 'QTWEBENGINE_DICTIONARIES_PATH': '/usr/share/hunspell-bdic/', 'PYTHONPATH': '/home/zenix/ros2_ws/install/turtlesim/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'LC_NUMERIC': 'en_US.UTF-8', 'LC_PAPER': 'en_US.UTF-8', 'COLCON': '1', 'MEMORY_PRESSURE_WRITE': 'c29tZSAyMDAwMDAgMjAwMDAwMAA=', 'VTE_VERSION': '7600', 'CMAKE_PREFIX_PATH': '/home/zenix/ros2_ws/install/vloc_receiver:/home/zenix/ros2_ws/install/pose_monitor:/home/zenix/ros2_ws/install/gls100_ros2:/home/zenix/ros2_ws/install/turtlesim:/opt/ros/jazzy:/home/zenix/ros2_ws/install/fms_mqtt_publish:/opt/ros/jazzy/opt/gz_sim_vendor:/opt/ros/jazzy/opt/gz_sensors_vendor:/opt/ros/jazzy/opt/gz_physics_vendor:/opt/ros/jazzy/opt/sdformat_vendor:/opt/ros/jazzy/opt/gz_gui_vendor:/opt/ros/jazzy/opt/gz_transport_vendor:/opt/ros/jazzy/opt/gz_rendering_vendor:/opt/ros/jazzy/opt/gz_plugin_vendor:/opt/ros/jazzy/opt/gz_fuel_tools_vendor:/opt/ros/jazzy/opt/gz_msgs_vendor:/opt/ros/jazzy/opt/gz_common_vendor:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_tools_vendor:/opt/ros/jazzy/opt/gz_ogre_next_vendor:/opt/ros/jazzy/opt/gz_dartsim_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor'}), 'shell': False}
+[2.304410] (-) TimerEvent: {}
+[2.312082] (pose_monitor) StdoutLine: {'line': b'[ 50%] \x1b[32mBuilding CXX object CMakeFiles/pose_monitor_node.dir/src/pose_monitor_node.cpp.o\x1b[0m\n'}
+[2.404552] (-) TimerEvent: {}
+[2.504951] (-) TimerEvent: {}
+[2.605368] (-) TimerEvent: {}
+[2.705800] (-) TimerEvent: {}
+[2.806269] (-) TimerEvent: {}
+[2.906690] (-) TimerEvent: {}
+[3.007116] (-) TimerEvent: {}
+[3.107563] (-) TimerEvent: {}
+[3.207984] (-) TimerEvent: {}
+[3.308439] (-) TimerEvent: {}
+[3.408869] (-) TimerEvent: {}
+[3.509261] (-) TimerEvent: {}
+[3.609685] (-) TimerEvent: {}
+[3.710126] (-) TimerEvent: {}
+[3.810615] (-) TimerEvent: {}
+[3.911065] (-) TimerEvent: {}
+[4.011527] (-) TimerEvent: {}
+[4.111973] (-) TimerEvent: {}
+[4.212401] (-) TimerEvent: {}
+[4.312825] (-) TimerEvent: {}
+[4.413269] (-) TimerEvent: {}
+[4.513698] (-) TimerEvent: {}
+[4.614132] (-) TimerEvent: {}
+[4.714573] (-) TimerEvent: {}
+[4.815001] (-) TimerEvent: {}
+[4.915438] (-) TimerEvent: {}
+[5.015855] (-) TimerEvent: {}
+[5.116265] (-) TimerEvent: {}
+[5.216745] (-) TimerEvent: {}
+[5.317242] (-) TimerEvent: {}
+[5.417673] (-) TimerEvent: {}
+[5.518116] (-) TimerEvent: {}
+[5.618561] (-) TimerEvent: {}
+[5.718988] (-) TimerEvent: {}
+[5.819439] (-) TimerEvent: {}
+[5.919895] (-) TimerEvent: {}
+[6.020316] (-) TimerEvent: {}
+[6.120722] (-) TimerEvent: {}
+[6.221201] (-) TimerEvent: {}
+[6.321673] (-) TimerEvent: {}
+[6.422133] (-) TimerEvent: {}
+[6.522577] (-) TimerEvent: {}
+[6.623004] (-) TimerEvent: {}
+[6.723443] (-) TimerEvent: {}
+[6.823865] (-) TimerEvent: {}
+[6.924263] (-) TimerEvent: {}
+[6.970753] (pose_monitor) StderrLine: {'line': b'\x1b[01m\x1b[K/home/zenix/git/ros2/pose_monitor/src/pose_monitor_node.cpp:\x1b[m\x1b[K In member function \xe2\x80\x98\x1b[01m\x1b[Kvoid PoseMonitor::\x1b[01;32m\x1b[KsaveToCSV\x1b[m\x1b[K()\x1b[m\x1b[K\xe2\x80\x99:\n'}
+[6.971111] (pose_monitor) StderrLine: {'line': b'\x1b[01m\x1b[K/home/zenix/git/ros2/pose_monitor/src/pose_monitor_node.cpp:191:36:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kcomparison of integer expressions of different signedness: \xe2\x80\x98\x1b[01m\x1b[Kstd::deque<std::__cxx11::basic_string<char> >::size_type\x1b[m\x1b[K\xe2\x80\x99 {aka \xe2\x80\x98\x1b[01m\x1b[Klong unsigned int\x1b[m\x1b[K\xe2\x80\x99} and \xe2\x80\x98\x1b[01m\x1b[Kconst int\x1b[m\x1b[K\xe2\x80\x99 [\x1b[01;35m\x1b[K\x1b]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wsign-compare\x07-Wsign-compare\x1b]8;;\x07\x1b[m\x1b[K]\n'}
+[6.971227] (pose_monitor) StderrLine: {'line': b'  191 |         while (\x1b[01;35m\x1b[Klog_history_.size() > MAX_LOG_LINES\x1b[m\x1b[K) {\n'}
+[6.971299] (pose_monitor) StderrLine: {'line': b'      |                \x1b[01;35m\x1b[K~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~\x1b[m\x1b[K\n'}
+[6.971983] (pose_monitor) StderrLine: {'line': b'\x1b[01m\x1b[K/home/zenix/git/ros2/pose_monitor/src/pose_monitor_node.cpp:\x1b[m\x1b[K In static member function \xe2\x80\x98\x1b[01m\x1b[Kstatic void PoseMonitor::\x1b[01;32m\x1b[KmouseCallback\x1b[m\x1b[K(int, int, int, int, void*)\x1b[m\x1b[K\xe2\x80\x99:\n'}
+[6.972216] (pose_monitor) StderrLine: {'line': b'\x1b[01m\x1b[K/home/zenix/git/ros2/pose_monitor/src/pose_monitor_node.cpp:198:60:\x1b[m\x1b[K \x1b[01;35m\x1b[Kwarning: \x1b[m\x1b[Kunused parameter \xe2\x80\x98\x1b[01m\x1b[Kflags\x1b[m\x1b[K\xe2\x80\x99 [\x1b[01;35m\x1b[K\x1b]8;;https://gcc.gnu.org/onlinedocs/gcc/Warning-Options.html#index-Wunused-parameter\x07-Wunused-parameter\x1b]8;;\x07\x1b[m\x1b[K]\n'}
+[6.972363] (pose_monitor) StderrLine: {'line': b'  198 |     static void mouseCallback(int event, int x, int y, \x1b[01;35m\x1b[Kint flags\x1b[m\x1b[K, void* userdata) {\n'}
+[6.972467] (pose_monitor) StderrLine: {'line': b'      |                                                        \x1b[01;35m\x1b[K~~~~^~~~~\x1b[m\x1b[K\n'}
+[7.024398] (-) TimerEvent: {}
+[7.124826] (-) TimerEvent: {}
+[7.225262] (-) TimerEvent: {}
+[7.325696] (-) TimerEvent: {}
+[7.426127] (-) TimerEvent: {}
+[7.526582] (-) TimerEvent: {}
+[7.627003] (-) TimerEvent: {}
+[7.727445] (-) TimerEvent: {}
+[7.827869] (-) TimerEvent: {}
+[7.928281] (-) TimerEvent: {}
+[8.028722] (-) TimerEvent: {}
+[8.129163] (-) TimerEvent: {}
+[8.229590] (-) TimerEvent: {}
+[8.330032] (-) TimerEvent: {}
+[8.430453] (-) TimerEvent: {}
+[8.530868] (-) TimerEvent: {}
+[8.631266] (-) TimerEvent: {}
+[8.731701] (-) TimerEvent: {}
+[8.832127] (-) TimerEvent: {}
+[8.932628] (-) TimerEvent: {}
+[9.033047] (-) TimerEvent: {}
+[9.133505] (-) TimerEvent: {}
+[9.233989] (-) TimerEvent: {}
+[9.334455] (-) TimerEvent: {}
+[9.434886] (-) TimerEvent: {}
+[9.535473] (-) TimerEvent: {}
+[9.635912] (-) TimerEvent: {}
+[9.736383] (-) TimerEvent: {}
+[9.836820] (-) TimerEvent: {}
+[9.937251] (-) TimerEvent: {}
+[10.037679] (-) TimerEvent: {}
+[10.138111] (-) TimerEvent: {}
+[10.238558] (-) TimerEvent: {}
+[10.339004] (-) TimerEvent: {}
+[10.439444] (-) TimerEvent: {}
+[10.539869] (-) TimerEvent: {}
+[10.640288] (-) TimerEvent: {}
+[10.740713] (-) TimerEvent: {}
+[10.841159] (-) TimerEvent: {}
+[10.941588] (-) TimerEvent: {}
+[11.042011] (-) TimerEvent: {}
+[11.142457] (-) TimerEvent: {}
+[11.242880] (-) TimerEvent: {}
+[11.343302] (-) TimerEvent: {}
+[11.443734] (-) TimerEvent: {}
+[11.544172] (-) TimerEvent: {}
+[11.644598] (-) TimerEvent: {}
+[11.745045] (-) TimerEvent: {}
+[11.845501] (-) TimerEvent: {}
+[11.945923] (-) TimerEvent: {}
+[12.046387] (-) TimerEvent: {}
+[12.146932] (-) TimerEvent: {}
+[12.247381] (-) TimerEvent: {}
+[12.347909] (-) TimerEvent: {}
+[12.448444] (-) TimerEvent: {}
+[12.548887] (-) TimerEvent: {}
+[12.649283] (-) TimerEvent: {}
+[12.749692] (-) TimerEvent: {}
+[12.850103] (-) TimerEvent: {}
+[12.950618] (-) TimerEvent: {}
+[13.051036] (-) TimerEvent: {}
+[13.151437] (-) TimerEvent: {}
+[13.251808] (-) TimerEvent: {}
+[13.352206] (-) TimerEvent: {}
+[13.452604] (-) TimerEvent: {}
+[13.553010] (-) TimerEvent: {}
+[13.653438] (-) TimerEvent: {}
+[13.753862] (-) TimerEvent: {}
+[13.854241] (-) TimerEvent: {}
+[13.954623] (-) TimerEvent: {}
+[14.055019] (-) TimerEvent: {}
+[14.155446] (-) TimerEvent: {}
+[14.255844] (-) TimerEvent: {}
+[14.356241] (-) TimerEvent: {}
+[14.456639] (-) TimerEvent: {}
+[14.557041] (-) TimerEvent: {}
+[14.657468] (-) TimerEvent: {}
+[14.757866] (-) TimerEvent: {}
+[14.858298] (-) TimerEvent: {}
+[14.958707] (-) TimerEvent: {}
+[15.059115] (-) TimerEvent: {}
+[15.159546] (-) TimerEvent: {}
+[15.259956] (-) TimerEvent: {}
+[15.360399] (-) TimerEvent: {}
+[15.460806] (-) TimerEvent: {}
+[15.561202] (-) TimerEvent: {}
+[15.661574] (-) TimerEvent: {}
+[15.761950] (-) TimerEvent: {}
+[15.862358] (-) TimerEvent: {}
+[15.962712] (-) TimerEvent: {}
+[16.063102] (-) TimerEvent: {}
+[16.163518] (-) TimerEvent: {}
+[16.263933] (-) TimerEvent: {}
+[16.364356] (-) TimerEvent: {}
+[16.464779] (-) TimerEvent: {}
+[16.565251] (-) TimerEvent: {}
+[16.665688] (-) TimerEvent: {}
+[16.743295] (pose_monitor) StdoutLine: {'line': b'[100%] \x1b[32m\x1b[1mLinking CXX executable pose_monitor_node\x1b[0m\n'}
+[16.765811] (-) TimerEvent: {}
+[16.866238] (-) TimerEvent: {}
+[16.966731] (-) TimerEvent: {}
+[17.067193] (-) TimerEvent: {}
+[17.167740] (-) TimerEvent: {}
+[17.268244] (-) TimerEvent: {}
+[17.368706] (-) TimerEvent: {}
+[17.469175] (-) TimerEvent: {}
+[17.569628] (-) TimerEvent: {}
+[17.670066] (-) TimerEvent: {}
+[17.770549] (-) TimerEvent: {}
+[17.870996] (-) TimerEvent: {}
+[17.971422] (-) TimerEvent: {}
+[18.071869] (-) TimerEvent: {}
+[18.172277] (-) TimerEvent: {}
+[18.190913] (pose_monitor) StdoutLine: {'line': b'[100%] Built target pose_monitor_node\n'}
+[18.238695] (pose_monitor) CommandEnded: {'returncode': 0}
+[18.240199] (pose_monitor) JobProgress: {'identifier': 'pose_monitor', 'progress': 'install'}
+[18.256972] (pose_monitor) Command: {'cmd': ['/usr/bin/cmake', '--install', '/home/zenix/git/ros2/build/pose_monitor'], 'cwd': '/home/zenix/git/ros2/build/pose_monitor', 'env': OrderedDict({'LESSOPEN': '| /usr/bin/lesspipe %s', 'LANGUAGE': 'ko_KR.UTF-8', 'USER': 'zenix', 'LC_TIME': 'en_US.UTF-8', 'GZ_CONFIG_PATH': '/opt/ros/jazzy/opt/gz_sim_vendor/share/gz:/opt/ros/jazzy/opt/sdformat_vendor/share/gz:/opt/ros/jazzy/opt/gz_gui_vendor/share/gz:/opt/ros/jazzy/opt/gz_transport_vendor/share/gz:/opt/ros/jazzy/opt/gz_rendering_vendor/share/gz:/opt/ros/jazzy/opt/gz_plugin_vendor/share/gz:/opt/ros/jazzy/opt/gz_fuel_tools_vendor/share/gz:/opt/ros/jazzy/opt/gz_msgs_vendor/share/gz:/opt/ros/jazzy/opt/gz_common_vendor/share/gz', 'XDG_SESSION_TYPE': 'wayland', 'SHLVL': '1', 'LD_LIBRARY_PATH': '/home/zenix/ros2_ws/install/turtlesim/lib:/opt/ros/jazzy/opt/gz_sim_vendor/lib:/opt/ros/jazzy/opt/gz_sensors_vendor/lib:/opt/ros/jazzy/opt/gz_physics_vendor/lib:/opt/ros/jazzy/opt/sdformat_vendor/lib:/opt/ros/jazzy/opt/rviz_ogre_vendor/lib:/opt/ros/jazzy/lib/x86_64-linux-gnu:/opt/ros/jazzy/opt/gz_gui_vendor/lib:/opt/ros/jazzy/opt/gz_transport_vendor/lib:/opt/ros/jazzy/opt/gz_rendering_vendor/lib:/opt/ros/jazzy/opt/gz_plugin_vendor/lib:/opt/ros/jazzy/opt/gz_fuel_tools_vendor/lib:/opt/ros/jazzy/opt/gz_msgs_vendor/lib:/opt/ros/jazzy/opt/gz_common_vendor/lib:/opt/ros/jazzy/opt/gz_math_vendor/lib:/opt/ros/jazzy/opt/gz_utils_vendor/lib:/opt/ros/jazzy/opt/gz_tools_vendor/lib:/opt/ros/jazzy/opt/gz_ogre_next_vendor/lib:/opt/ros/jazzy/opt/gz_dartsim_vendor/lib:/opt/ros/jazzy/opt/gz_cmake_vendor/lib:/opt/ros/jazzy/lib', 'HOME': '/home/zenix', 'OLDPWD': '/home/zenix/git', 'DESKTOP_SESSION': 'ubuntu', 'ROS_PYTHON_VERSION': '3', 'GNOME_SHELL_SESSION_MODE': 'ubuntu', 'GTK_MODULES': 'gail:atk-bridge', 'LC_MONETARY': 'en_US.UTF-8', 'MANAGERPID': '4030', 'SYSTEMD_EXEC_PID': '4552', 'GSM_SKIP_SSH_AGENT_WORKAROUND': 'true', 'DBUS_SESSION_BUS_ADDRESS': 'unix:path=/run/user/1000/bus', 'COLORTERM': 'truecolor', 'TERMINATOR_DBUS_NAME': 'net.tenshu.Terminator25ef4b219e3b005583550f2b0f9f990c3', 'GIO_LAUNCHED_DESKTOP_FILE_PID': '7904', 'GNOME_KEYRING_CONTROL': '/run/user/1000/keyring', 'DEBUGINFOD_URLS': 'https://debuginfod.ubuntu.com', 'IM_CONFIG_PHASE': '1', 'WAYLAND_DISPLAY': 'wayland-0', 'COLCON_PREFIX_PATH': '/home/zenix/ros2_ws/install', 'ROS_DISTRO': 'jazzy', 'LOGNAME': 'zenix', 'JOURNAL_STREAM': '9:39014', '_': '/usr/bin/colcon', 'ROS_VERSION': '2', 'MEMORY_PRESSURE_WATCH': '/sys/fs/cgroup/user.slice/user-1000.slice/user@1000.service/session.slice/org.gnome.SettingsDaemon.MediaKeys.service/memory.pressure', 'XDG_SESSION_CLASS': 'user', 'USERNAME': 'zenix', 'TERM': 'xterm-256color', 'GNOME_DESKTOP_SESSION_ID': 'this-is-deprecated', 'PATH': '/opt/ros/jazzy/opt/gz_msgs_vendor/bin:/opt/ros/jazzy/opt/gz_tools_vendor/bin:/opt/ros/jazzy/opt/gz_ogre_next_vendor/bin:/opt/ros/jazzy/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games:/snap/bin:/snap/bin', 'SESSION_MANAGER': 'local/zenix-16Z90S-GA5CK:@/tmp/.ICE-unix/4279,unix/zenix-16Z90S-GA5CK:/tmp/.ICE-unix/4279', 'INVOCATION_ID': '683510c6c71145ccb535950c697a41f5', 'PAPERSIZE': 'letter', 'XDG_MENU_PREFIX': 'gnome-', 'LC_ADDRESS': 'en_US.UTF-8', 'GNOME_SETUP_DISPLAY': ':1', 'XDG_RUNTIME_DIR': '/run/user/1000', 'DISPLAY': ':0', 'TERMINATOR_DBUS_PATH': '/net/tenshu/Terminator2', 'LANG': 'ko_KR.UTF-8', 'XDG_CURRENT_DESKTOP': 'ubuntu:GNOME', 'LC_TELEPHONE': 'en_US.UTF-8', 'XMODIFIERS': '@im=ibus', 'XDG_SESSION_DESKTOP': 'ubuntu', 'XAUTHORITY': '/run/user/1000/.mutter-Xwaylandauth.N8L5D3', 'LS_COLORS': 'rs=0:di=01;34:ln=01;36:mh=00:pi=40;33:so=01;35:do=01;35:bd=40;33;01:cd=40;33;01:or=40;31;01:mi=00:su=37;41:sg=30;43:ca=00:tw=30;42:ow=34;42:st=37;44:ex=01;32:*.tar=01;31:*.tgz=01;31:*.arc=01;31:*.arj=01;31:*.taz=01;31:*.lha=01;31:*.lz4=01;31:*.lzh=01;31:*.lzma=01;31:*.tlz=01;31:*.txz=01;31:*.tzo=01;31:*.t7z=01;31:*.zip=01;31:*.z=01;31:*.dz=01;31:*.gz=01;31:*.lrz=01;31:*.lz=01;31:*.lzo=01;31:*.xz=01;31:*.zst=01;31:*.tzst=01;31:*.bz2=01;31:*.bz=01;31:*.tbz=01;31:*.tbz2=01;31:*.tz=01;31:*.deb=01;31:*.rpm=01;31:*.jar=01;31:*.war=01;31:*.ear=01;31:*.sar=01;31:*.rar=01;31:*.alz=01;31:*.ace=01;31:*.zoo=01;31:*.cpio=01;31:*.7z=01;31:*.rz=01;31:*.cab=01;31:*.wim=01;31:*.swm=01;31:*.dwm=01;31:*.esd=01;31:*.avif=01;35:*.jpg=01;35:*.jpeg=01;35:*.mjpg=01;35:*.mjpeg=01;35:*.gif=01;35:*.bmp=01;35:*.pbm=01;35:*.pgm=01;35:*.ppm=01;35:*.tga=01;35:*.xbm=01;35:*.xpm=01;35:*.tif=01;35:*.tiff=01;35:*.png=01;35:*.svg=01;35:*.svgz=01;35:*.mng=01;35:*.pcx=01;35:*.mov=01;35:*.mpg=01;35:*.mpeg=01;35:*.m2v=01;35:*.mkv=01;35:*.webm=01;35:*.webp=01;35:*.ogm=01;35:*.mp4=01;35:*.m4v=01;35:*.mp4v=01;35:*.vob=01;35:*.qt=01;35:*.nuv=01;35:*.wmv=01;35:*.asf=01;35:*.rm=01;35:*.rmvb=01;35:*.flc=01;35:*.avi=01;35:*.fli=01;35:*.flv=01;35:*.gl=01;35:*.dl=01;35:*.xcf=01;35:*.xwd=01;35:*.yuv=01;35:*.cgm=01;35:*.emf=01;35:*.ogv=01;35:*.ogx=01;35:*.aac=00;36:*.au=00;36:*.flac=00;36:*.m4a=00;36:*.mid=00;36:*.midi=00;36:*.mka=00;36:*.mp3=00;36:*.mpc=00;36:*.ogg=00;36:*.ra=00;36:*.wav=00;36:*.oga=00;36:*.opus=00;36:*.spx=00;36:*.xspf=00;36:*~=00;90:*#=00;90:*.bak=00;90:*.crdownload=00;90:*.dpkg-dist=00;90:*.dpkg-new=00;90:*.dpkg-old=00;90:*.dpkg-tmp=00;90:*.old=00;90:*.orig=00;90:*.part=00;90:*.rej=00;90:*.rpmnew=00;90:*.rpmorig=00;90:*.rpmsave=00;90:*.swp=00;90:*.tmp=00;90:*.ucf-dist=00;90:*.ucf-new=00;90:*.ucf-old=00;90:', 'SSH_AUTH_SOCK': '/run/user/1000/keyring/ssh', 'ROS_DOMAIN_ID': '11', 'AMENT_PREFIX_PATH': '/home/zenix/ros2_ws/install/vloc_receiver:/home/zenix/ros2_ws/install/pose_monitor:/home/zenix/ros2_ws/install/gls100_ros2:/home/zenix/ros2_ws/install/turtlesim:/home/zenix/ros2_ws/install/fms_mqtt_publish:/opt/ros/jazzy', 'SHELL': '/bin/bash', 'LC_NAME': 'en_US.UTF-8', 'TERMINATOR_UUID': 'urn:uuid:6747ebdd-39d7-41e7-af2e-9f5328000519', 'QT_ACCESSIBILITY': '1', 'GDMSESSION': 'ubuntu', 'LESSCLOSE': '/usr/bin/lesspipe %s %s', 'LC_MEASUREMENT': 'en_US.UTF-8', 'LC_IDENTIFICATION': 'en_US.UTF-8', 'ROS_AUTOMATIC_DISCOVERY_RANGE': 'SUBNET', 'QT_IM_MODULE': 'ibus', 'PWD': '/home/zenix/git/ros2/build/pose_monitor', 'LC_ALL': 'en_US.UTF-8', 'XDG_CONFIG_DIRS': '/etc/xdg/xdg-ubuntu:/etc/xdg', 'XDG_DATA_DIRS': '/usr/share/ubuntu:/usr/share/gnome:/usr/local/share/:/usr/share/:/var/lib/snapd/desktop', 'QTWEBENGINE_DICTIONARIES_PATH': '/usr/share/hunspell-bdic/', 'PYTHONPATH': '/home/zenix/ros2_ws/install/turtlesim/lib/python3.12/site-packages:/opt/ros/jazzy/lib/python3.12/site-packages', 'LC_NUMERIC': 'en_US.UTF-8', 'LC_PAPER': 'en_US.UTF-8', 'COLCON': '1', 'MEMORY_PRESSURE_WRITE': 'c29tZSAyMDAwMDAgMjAwMDAwMAA=', 'VTE_VERSION': '7600', 'CMAKE_PREFIX_PATH': '/home/zenix/ros2_ws/install/vloc_receiver:/home/zenix/ros2_ws/install/pose_monitor:/home/zenix/ros2_ws/install/gls100_ros2:/home/zenix/ros2_ws/install/turtlesim:/opt/ros/jazzy:/home/zenix/ros2_ws/install/fms_mqtt_publish:/opt/ros/jazzy/opt/gz_sim_vendor:/opt/ros/jazzy/opt/gz_sensors_vendor:/opt/ros/jazzy/opt/gz_physics_vendor:/opt/ros/jazzy/opt/sdformat_vendor:/opt/ros/jazzy/opt/gz_gui_vendor:/opt/ros/jazzy/opt/gz_transport_vendor:/opt/ros/jazzy/opt/gz_rendering_vendor:/opt/ros/jazzy/opt/gz_plugin_vendor:/opt/ros/jazzy/opt/gz_fuel_tools_vendor:/opt/ros/jazzy/opt/gz_msgs_vendor:/opt/ros/jazzy/opt/gz_common_vendor:/opt/ros/jazzy/opt/gz_math_vendor:/opt/ros/jazzy/opt/gz_utils_vendor:/opt/ros/jazzy/opt/gz_tools_vendor:/opt/ros/jazzy/opt/gz_ogre_next_vendor:/opt/ros/jazzy/opt/gz_dartsim_vendor:/opt/ros/jazzy/opt/gz_cmake_vendor'}), 'shell': False}
+[18.272367] (-) TimerEvent: {}
+[18.273961] (pose_monitor) StdoutLine: {'line': b'-- Install configuration: ""\n'}
+[18.274207] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/lib/pose_monitor/pose_monitor_node\n'}
+[18.280364] (pose_monitor) StdoutLine: {'line': b'-- Set non-toolchain portion of runtime path of "/home/zenix/git/ros2/install/pose_monitor/lib/pose_monitor/pose_monitor_node" to ""\n'}
+[18.280586] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/ament_index/resource_index/package_run_dependencies/pose_monitor\n'}
+[18.280979] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/ament_index/resource_index/parent_prefix_path/pose_monitor\n'}
+[18.281176] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/environment/ament_prefix_path.sh\n'}
+[18.281330] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/environment/ament_prefix_path.dsv\n'}
+[18.281468] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/environment/path.sh\n'}
+[18.281597] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/environment/path.dsv\n'}
+[18.281699] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/local_setup.bash\n'}
+[18.281812] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/local_setup.sh\n'}
+[18.281951] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/local_setup.zsh\n'}
+[18.282071] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/local_setup.dsv\n'}
+[18.282207] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/package.dsv\n'}
+[18.282333] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/ament_index/resource_index/packages/pose_monitor\n'}
+[18.282562] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/cmake/pose_monitorConfig.cmake\n'}
+[18.282697] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/cmake/pose_monitorConfig-version.cmake\n'}
+[18.282844] (pose_monitor) StdoutLine: {'line': b'-- Installing: /home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/package.xml\n'}
+[18.286677] (pose_monitor) CommandEnded: {'returncode': 0}
+[18.306111] (pose_monitor) JobEnded: {'identifier': 'pose_monitor', 'rc': 0}
+[18.307751] (-) EventReactorShutdown: {}

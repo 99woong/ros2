@@ -1,0 +1,16 @@
+/home/zenix/git/ros2/install/pose_monitor/lib/pose_monitor/pose_monitor_node
+/home/zenix/git/ros2/install/pose_monitor/share/ament_index/resource_index/package_run_dependencies/pose_monitor
+/home/zenix/git/ros2/install/pose_monitor/share/ament_index/resource_index/parent_prefix_path/pose_monitor
+/home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/environment/ament_prefix_path.sh
+/home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/environment/ament_prefix_path.dsv
+/home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/environment/path.sh
+/home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/environment/path.dsv
+/home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/local_setup.bash
+/home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/local_setup.sh
+/home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/local_setup.zsh
+/home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/local_setup.dsv
+/home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/package.dsv
+/home/zenix/git/ros2/install/pose_monitor/share/ament_index/resource_index/packages/pose_monitor
+/home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/cmake/pose_monitorConfig.cmake
+/home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/cmake/pose_monitorConfig-version.cmake
+/home/zenix/git/ros2/install/pose_monitor/share/pose_monitor/package.xml
