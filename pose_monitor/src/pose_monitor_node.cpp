@@ -48,17 +48,15 @@ private:
     
     rclcpp::TimerBase::SharedPtr timer_;
     
-    // CSV logging
     std::ofstream csv_file_;
     std::string csv_filename_;
     cv::Rect save_button_rect_;
     bool mouse_over_button_;
     bool csv_file_created_;
 
-    // *** 로그 히스토리 저장 ***
     std::deque<std::string> log_history_;
-    const int MAX_LOG_LINES = 8;  // *** 에디트박스에 표시할 최대 라인 수 ***
-    int log_count_;  // *** 총 저장 횟수 카운터 ***    
+    const int MAX_LOG_LINES = 8;  
+    int log_count_;    
     
 public:
     PoseMonitor() : Node("pose_monitor_node"), 
@@ -67,7 +65,8 @@ public:
                     selected_topic2_idx_(1),
                     mouse_over_button_(false),
                     csv_file_created_(false),
-                    log_count_(0)  {
+                    log_count_(0)  
+    {
         
         topic1_ = "/vloc/pose";
         topic2_ = "/gls100/pose";
@@ -78,34 +77,32 @@ public:
         display_ = cv::Mat(WINDOW_HEIGHT, WINDOW_WIDTH, CV_8UC3, cv::Scalar(240, 240, 240));
         cv::namedWindow("Pose Monitor", cv::WINDOW_AUTOSIZE);
         
-        // Set mouse callback for button click
         cv::setMouseCallback("Pose Monitor", mouseCallback, this);
         
-        // Trackbar for sample size
         cv::createTrackbar("Sample Size", "Pose Monitor", &sample_size_, 100);
         cv::setTrackbarMin("Sample Size", "Pose Monitor", 1);
         cv::setTrackbarPos("Sample Size", "Pose Monitor", 10);
         
-        // Define save button position
         save_button_rect_ = cv::Rect(WINDOW_WIDTH - 250, 10, 230, 40);
         
         getAvailableTopics();
-        subscribePoseTopics();
-        
-        // Timer for display update (30 Hz)
+        subscribePoseTopics();  
+
         timer_ = this->create_wall_timer(
             std::chrono::milliseconds(33),
             std::bind(&PoseMonitor::displayCallback, this));
     }
     
-    ~PoseMonitor() {
-        if (csv_file_.is_open()) {
+    ~PoseMonitor() 
+    {
+        if (csv_file_.is_open()) 
+        {
             csv_file_.close();
         }
     }
     
-    void generateCSVFilename() {
-        // Get current timestamp
+    void generateCSVFilename() 
+    {
         auto now = std::chrono::system_clock::now();
         auto now_c = std::chrono::system_clock::to_time_t(now);
         auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -122,32 +119,36 @@ public:
                     csv_filename_.c_str());
     }
     
-    void createCSVFile() {
+    void createCSVFile() 
+    {
         csv_file_.open(csv_filename_, std::ios::app);
         
-        if (csv_file_.is_open()) {
+        if (csv_file_.is_open()) 
+        {
             csv_file_created_ = true;
             RCLCPP_INFO(this->get_logger(), "CSV file created: %s", csv_filename_.c_str());
-        } else {
+        } 
+        else
+        {
             RCLCPP_ERROR(this->get_logger(), "Failed to create CSV file: %s", csv_filename_.c_str());
         }
     }
     
-    void saveToCSV() {
-        // Create CSV file on first save
-        if (!csv_file_created_) {
+    void saveToCSV() 
+    {
+        if (!csv_file_created_) 
+        {
             createCSVFile();
         }
         
-        if (!csv_file_.is_open()) {
+        if (!csv_file_.is_open()) 
+        {
             RCLCPP_WARN(this->get_logger(), "CSV file is not open!");
             return;
         }
 
-        // *** 저장 횟수 증가 ***
         log_count_++;        
         
-        // Get current timestamp
         auto now = std::chrono::system_clock::now();
         auto now_c = std::chrono::system_clock::to_time_t(now);
         auto now_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -156,26 +157,24 @@ public:
         std::stringstream timestamp;
         timestamp << std::put_time(std::localtime(&now_c), "%Y-%m-%d %H:%M:%S")
                  << "." << std::setfill('0') << std::setw(3) << now_ms.count();
-        
-        // Write data to CSV
-        csv_file_ << timestamp.str() << ","
-                 << std::fixed << std::setprecision(6)
-                 << stats1_.current.x << ","
-                 << stats1_.current.y << ","
-                 << stats1_.current.yaw << ","
+
+        csv_file_<< std::fixed << std::setprecision(6)
+                 << stats1_.mean.x << ","
+                 << stats1_.mean.y << ","
+                 << stats1_.mean.yaw << ","
+                 << stats2_.mean.x << ","
+                 << stats2_.mean.y << ","
+                 << stats2_.mean.yaw << ","
                  << stats1_.stddev.x << ","
                  << stats1_.stddev.y << ","
                  << stats1_.stddev.yaw << ","
-                 << stats2_.current.x << ","
-                 << stats2_.current.y << ","
-                 << stats2_.current.yaw << ","
                  << stats2_.stddev.x << ","
                  << stats2_.stddev.y << ","
-                 << stats2_.stddev.yaw << "\n";
+                 << stats2_.stddev.yaw << ","
+                 << timestamp.str() << "\n";
         
         csv_file_.flush();
 
-        // *** 로그 히스토리에 추가 (순번 포함) ***
         std::stringstream log_entry;
         log_entry << "#" << log_count_ << " | " << timestamp.str() 
                  << " | V:(" << std::fixed << std::setprecision(2)
@@ -187,60 +186,73 @@ public:
         
         log_history_.push_back(log_entry.str());
         
-        // *** 최대 라인 수 유지 ***
-        while (log_history_.size() > MAX_LOG_LINES) {
+        while (log_history_.size() > MAX_LOG_LINES) 
+        {
             log_history_.pop_front();
         }        
 
         RCLCPP_INFO(this->get_logger(), "Data saved to CSV at %s", timestamp.str().c_str());
     }
     
-    static void mouseCallback(int event, int x, int y, int flags, void* userdata) {
+    static void mouseCallback(int event, int x, int y, int flags, void* userdata) 
+    {
         PoseMonitor* monitor = static_cast<PoseMonitor*>(userdata);
         
-        if (event == cv::EVENT_LBUTTONDOWN) {
-            if (monitor->save_button_rect_.contains(cv::Point(x, y))) {
+        if (event == cv::EVENT_LBUTTONDOWN) 
+        {
+            if (monitor->save_button_rect_.contains(cv::Point(x, y))) 
+            {
                 monitor->saveToCSV();
             }
-        } else if (event == cv::EVENT_MOUSEMOVE) {
+        } 
+        else if (event == cv::EVENT_MOUSEMOVE) 
+        {
             monitor->mouse_over_button_ = monitor->save_button_rect_.contains(cv::Point(x, y));
         }
     }
     
-    void getAvailableTopics() {
+    void getAvailableTopics() 
+    {
         auto topic_names_and_types = this->get_topic_names_and_types();
         
         available_topics_.clear();
-        for (const auto& topic : topic_names_and_types) {
-            for (const auto& type : topic.second) {
+        for (const auto& topic : topic_names_and_types) 
+        {
+            for (const auto& type : topic.second) 
+            {
                 if (type == "geometry_msgs/msg/PoseStamped" || 
-                    type == "geometry_msgs/msg/PoseWithCovarianceStamped") {
+                    type == "geometry_msgs/msg/PoseWithCovarianceStamped") 
+                    {
                     available_topics_.push_back(topic.first);
                     break;
                 }
             }
         }
         
-        if (available_topics_.empty()) {
+        if (available_topics_.empty()) 
+        {
             available_topics_.push_back("/vloc/pose");
             available_topics_.push_back("/gls100/pose");
         }
         
         // Set default topics if they exist
         auto it1 = std::find(available_topics_.begin(), available_topics_.end(), "/vloc/pose");
-        if (it1 != available_topics_.end()) {
+        if (it1 != available_topics_.end()) 
+        {
             selected_topic1_idx_ = std::distance(available_topics_.begin(), it1);
             topic1_ = "/vloc/pose";
         }
         
         auto it2 = std::find(available_topics_.begin(), available_topics_.end(), "/gls100/pose");
-        if (it2 != available_topics_.end()) {
+        if (it2 != available_topics_.end()) 
+        {
             selected_topic2_idx_ = std::distance(available_topics_.begin(), it2);
             topic2_ = "/gls100/pose";
         }
     }
     
-    void subscribePoseTopics() {
+    void subscribePoseTopics() 
+    {
         sub1_ = this->create_subscription<geometry_msgs::msg::PoseStamped>(
             topic1_, 10,
             std::bind(&PoseMonitor::poseCallback1, this, std::placeholders::_1));
@@ -252,15 +264,18 @@ public:
         RCLCPP_INFO(this->get_logger(), "Subscribed to: %s and %s", topic1_.c_str(), topic2_.c_str());
     }
     
-    void poseCallback1(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+    void poseCallback1(const geometry_msgs::msg::PoseStamped::SharedPtr msg) 
+    {
         updateStatistics(stats1_, msg);
     }
     
-    void poseCallback2(const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+    void poseCallback2(const geometry_msgs::msg::PoseStamped::SharedPtr msg) 
+    {
         updateStatistics(stats2_, msg);
     }
     
-    void updateStatistics(StatisticsData& stats, const geometry_msgs::msg::PoseStamped::SharedPtr msg) {
+    void updateStatistics(StatisticsData& stats, const geometry_msgs::msg::PoseStamped::SharedPtr msg) 
+    {
         PoseData pose;
         pose.x = msg->pose.position.x;
         pose.y = msg->pose.position.y;
@@ -280,14 +295,16 @@ public:
         stats.current = pose;
         stats.history.push_back(pose);
         
-        while (static_cast<int>(stats.history.size()) > sample_size_) {
+        while (static_cast<int>(stats.history.size()) > sample_size_) 
+        {
             stats.history.pop_front();
         }
         
         calculateStatistics(stats);
     }
     
-    void calculateStatistics(StatisticsData& stats) {
+    void calculateStatistics(StatisticsData& stats) 
+    {
         if (stats.history.empty()) return;
         
         double sum_x = 0, sum_y = 0, sum_yaw = 0;
@@ -315,12 +332,14 @@ public:
     }
     
     void drawText(const std::string& text, int x, int y, double scale = 0.6, 
-                  cv::Scalar color = cv::Scalar(0, 0, 0), int thickness = 1) {
+                  cv::Scalar color = cv::Scalar(0, 0, 0), int thickness = 1) 
+    {
         cv::putText(display_, text, cv::Point(x, y), cv::FONT_HERSHEY_SIMPLEX, 
                    scale, color, thickness);
     }
     
-    void drawButton() {
+    void drawButton() 
+    {
         cv::Scalar button_color = mouse_over_button_ ? 
             cv::Scalar(100, 180, 100) : cv::Scalar(80, 150, 80);
         cv::Scalar border_color = cv::Scalar(50, 100, 50);
@@ -344,7 +363,8 @@ public:
     }
     
     void drawPoseData(const std::string& title, const StatisticsData& stats, 
-                     int x_offset, int y_offset, cv::Scalar color) {
+                     int x_offset, int y_offset, cv::Scalar color) 
+    {
         // Title
         drawText(title, x_offset, y_offset, 0.8, color, 2);
         
@@ -385,18 +405,23 @@ public:
                 x_offset + 10, y, 0.5, cv::Scalar(100, 100, 100));
     }
     
-    void drawTopicList(int x_offset, int y_offset) {
+    void drawTopicList(int x_offset, int y_offset) 
+    {
         drawText("[ Available Topics ]", x_offset, y_offset, 0.7, cv::Scalar(0, 0, 0), 2);
         int y = y_offset + 30;
         
-        for (size_t i = 0; i < available_topics_.size() && i < 15; ++i) {
+        for (size_t i = 0; i < available_topics_.size() && i < 15; ++i) 
+        {
             cv::Scalar color = cv::Scalar(100, 100, 100);
             std::string marker = "  ";
             
-            if (static_cast<int>(i) == selected_topic1_idx_) {
+            if (static_cast<int>(i) == selected_topic1_idx_) 
+            {
                 color = cv::Scalar(200, 0, 0);
                 marker = "1>";
-            } else if (static_cast<int>(i) == selected_topic2_idx_) {
+            } 
+            else if (static_cast<int>(i) == selected_topic2_idx_) 
+            {
                 color = cv::Scalar(0, 150, 0);
                 marker = "2>";
             }
@@ -405,7 +430,8 @@ public:
             y += 22;
         }
         
-        if (available_topics_.size() > 15) {
+        if (available_topics_.size() > 15) 
+        {
             drawText(cv::format("... and %d more", (int)available_topics_.size() - 15), 
                     x_offset, y, 0.4, cv::Scalar(100, 100, 100));
         }
@@ -413,7 +439,8 @@ public:
 
   
     // *** 로그 히스토리 에디트박스 그리기 ***
-    void drawLogHistory(int x_offset, int y_offset, int width, int height) {
+    void drawLogHistory(int x_offset, int y_offset, int width, int height) 
+    {
         // 에디트박스 배경
         cv::Rect log_box(x_offset, y_offset, width, height);
         cv::rectangle(display_, log_box, cv::Scalar(255, 255, 255), cv::FILLED);
@@ -427,18 +454,23 @@ public:
         int y = y_offset + 25;
         int line_spacing = 20;
         
-        if (log_history_.empty()) {
+        if (log_history_.empty()) 
+        {
             drawText("No data saved yet. Click 'Save to CSV' button.", 
                     x_offset + 10, y, 0.45, cv::Scalar(150, 150, 150));
-        } else {
-            for (const auto& log : log_history_) {
+        } 
+        else 
+        {
+            for (const auto& log : log_history_) 
+            {
                 drawText(log, x_offset + 10, y, 0.4, cv::Scalar(0, 0, 0));
                 y += line_spacing;
             }
         }
     }
 
-    void displayCallback() {
+    void displayCallback() 
+    {
         sample_size_ = cv::getTrackbarPos("Sample Size", "Pose Monitor");
         if (sample_size_ < 1) sample_size_ = 1;
         
@@ -480,16 +512,20 @@ public:
         cv::imshow("Pose Monitor", display_);
         
         int key = cv::waitKey(1);
-        if (key == 'q' || key == 27) { // 'q' or ESC
+        if (key == 'q' || key == 27) 
+        { // 'q' or ESC
             rclcpp::shutdown();
-        } else if (key == 'r') { // Refresh topics
+        } 
+        else if (key == 'r') 
+        { // Refresh topics
             getAvailableTopics();
             RCLCPP_INFO(this->get_logger(), "Topics refreshed");
         }
     }
 };
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv) 
+{
     rclcpp::init(argc, argv);
     
     auto node = std::make_shared<PoseMonitor>();
