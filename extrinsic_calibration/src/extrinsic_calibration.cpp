@@ -14,7 +14,8 @@ struct Pose2D {
     double x, y, theta_deg;
     
     // Pose를 3x3 동차 변환 행렬로 변환
-    Matrix3d toMatrix() const {
+    Matrix3d toMatrix() const 
+    {
         double theta_rad = theta_deg * M_PI / 180.0;
         double c = std::cos(theta_rad);
         double s = std::sin(theta_rad);
@@ -27,7 +28,8 @@ struct Pose2D {
     }
     
     // 3x3 행렬을 Pose로 변환
-    static Pose2D fromMatrix(const Matrix3d& T) {
+    static Pose2D fromMatrix(const Matrix3d& T) 
+    {
         Pose2D p;
         p.x = T(0, 2);
         p.y = T(1, 2);
@@ -88,12 +90,22 @@ bool loadCSV(const std::string& filepath, std::vector<Measurement>& measurements
         
         if (values.size() >= 6) {
             Measurement m;
-            m.gls.x = values[0];
-            m.gls.y = values[1];
-            m.gls.theta_deg = values[2];
-            m.vslam.x = values[3];
-            m.vslam.y = values[4];
-            m.vslam.theta_deg = values[5];
+            m.gls.x = values[1];
+            m.gls.y = values[2];
+            m.gls.theta_deg = values[3];
+            m.vslam.x = values[7];
+            m.vslam.y = values[8];
+            m.vslam.theta_deg = values[9];
+
+
+            double gx = m.gls.x;
+            double gy = m.gls.y;
+            m.gls.x =  gy;
+            m.gls.y = -gx;
+
+
+            std::cout << m.gls.x << " " << m.gls.y << " " << m.gls.theta_deg << " " << m.vslam.x << " " << m.vslam.y << " " << m.vslam.theta_deg << " " << std::endl;
+            
             measurements.push_back(m);
         }
     }
@@ -102,7 +114,6 @@ bool loadCSV(const std::string& filepath, std::vector<Measurement>& measurements
     return !measurements.empty();
 }
 
-// Hand-Eye Calibration 수행
 // AX = XB 문제를 풀어서 X (센서 간 변환) 계산
 Matrix3d calibrateSensors(const std::vector<Measurement>& measurements) {
     size_t N = measurements.size();
