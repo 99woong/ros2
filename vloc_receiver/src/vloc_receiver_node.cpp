@@ -227,10 +227,16 @@ bool VlocReceiver::parsePacket(std::vector<uint8_t>& packet)
     
     return parsed;
 }
+struct PoseData {
+    double x;
+    double y;
+    double yaw;
+};
 
 void VlocReceiver::publishVlocData(const VlocPacket& pkt)
 {
     auto msg = geometry_msgs::msg::PoseStamped();
+    PoseData pose;
     
     // 헤더 설정
     msg.header.stamp = this->now();
@@ -244,9 +250,14 @@ void VlocReceiver::publishVlocData(const VlocPacket& pkt)
     // 자세 설정 (pitch, roll, yaw를 quaternion으로 변환)
     // 단위가 degree라면 radian으로 변환 필요
     // RPY를 Quaternion으로 변환
-    double roll = pkt.roll / 1000.0;   // 단위 확인 필요
-    double pitch = pkt.pitch / 1000.0;
-    double yaw = pkt.yaw / 1000.0;
+    double roll_deg = pkt.roll / 1000.0;   // 단위 확인 필요
+    double pitch_deg = pkt.pitch / 1000.0;
+    double yaw_deg = pkt.yaw / 100.0;
+
+    // Degree를 Quaternion 공식에 사용하기 위한 Radian으로 변환
+    double roll = roll_deg * M_PI / 180.0;
+    double pitch = pitch_deg * M_PI / 180.0;
+    double yaw = yaw_deg * M_PI / 180.0; // **<-- 핵심 수정 사항!**    
     
     // Quaternion 계산 (수동 계산)
     double cy = cos(yaw * 0.5);
@@ -256,11 +267,25 @@ void VlocReceiver::publishVlocData(const VlocPacket& pkt)
     double cr = cos(roll * 0.5);
     double sr = sin(roll * 0.5);
     
-    msg.pose.orientation.w = cr * cp * cy + sr * sp * sy;
-    msg.pose.orientation.x = sr * cp * cy - cr * sp * sy;
-    msg.pose.orientation.y = cr * sp * cy + sr * cp * sy;
-    msg.pose.orientation.z = cr * cp * sy - sr * sp * cy;
+    // msg.pose.orientation.w = cr * cp * cy + sr * sp * sy;
+    // msg.pose.orientation.x = sr * cp * cy - cr * sp * sy;
+    // msg.pose.orientation.y = cr * sp * cy + sr * cp * sy;
+    // msg.pose.orientation.z = cr * cp * sy - sr * sp * cy;
+
+    // tf2::Quaternion q(
+    //     msg.pose.orientation.x,
+    //     msg.pose.orientation.y,
+    //     msg.pose.orientation.z,
+    //     msg.pose.orientation.w
+    // );
     
+    // tf2::Matrix3x3 m(q);
+    // double roll_, pitch_, yaw_;
+    // m.getRPY(roll_, pitch_, yaw_);
+    // pose.yaw = yaw_ * 180.0 / M_PI; // Convert to degrees\
+
+    // std::cout << "after yaw: " << pose.yaw <<std::endl;    
+
     // 토픽 발행
     pose_pub_->publish(msg);
     
@@ -268,7 +293,7 @@ void VlocReceiver::publishVlocData(const VlocPacket& pkt)
     RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
                          "VLOC Pose: X=%.3f, Y=%.3f, Z=%.3f, Yaw=%.3f, Quality=%d, Reloc=%d",
                          msg.pose.position.x, msg.pose.position.y, msg.pose.position.z,
-                         yaw, pkt.quality, pkt.reloc);
+                         yaw_deg, pkt.quality, pkt.reloc);
 }
 
 int main(int argc, char** argv)
