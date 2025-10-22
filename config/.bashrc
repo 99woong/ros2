@@ -140,7 +140,8 @@ alias cbpv='cd ~/ros2_ws && cbp vloc_receiver'
 alias cbpg='cd ~/ros2_ws && cbp gls100_ros2'
 alias cbpp='cd ~/ros2_ws && cbp pose_monitor'
 alias rlpp='ros2 launch pose_monitor pose_monitor.launch.py'
-alias crsg='cd ~/ros2_ws/src && cp -rf ./vloc_receiver ./pose_monitor ./gls100_ros2 ~/git/ros2'
+alias crsg='cd ~/ros2_ws/src && cp -rf ./vloc_receiver ./pose_monitor ./gls100_ros2 ~/pose_logs ~/git/ros2'
+alias crsg='cd ~/git/ros2 && cp -rf ./vloc_receiver ./pose_monitor ./gls100_ros2 ~/ros2_ws/src'
 
 
 
