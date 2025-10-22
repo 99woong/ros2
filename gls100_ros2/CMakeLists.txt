@@ -40,13 +40,13 @@ install(TARGETS gls100_node
 
 # Install launch files
 install(DIRECTORY
-  launch
+  # launch
   DESTINATION share/${PROJECT_NAME}/
 )
 
 # Install config files
 install(DIRECTORY
-  config
+  # config
   DESTINATION share/${PROJECT_NAME}/
 )
 

@@ -13,7 +13,7 @@ public:
     {
         // Parameters
         this->declare_parameter("can_device", "PCAN_USBBUS1");
-        this->declare_parameter("can_baudrate", 125000);
+        this->declare_parameter("can_baudrate", 500000);
         this->declare_parameter("node_id", 10);
         this->declare_parameter("frame_id", "gls100");
         
@@ -41,7 +41,7 @@ public:
             std::chrono::milliseconds(10),
             std::bind(&GLS100Node::readCANMessages, this));
         
-        RCLCPP_INFO(this->get_logger(), "GLS100 Node initialized");
+        RCLCPP_INFO(this->get_logger(), "GLS100 Node initialized1111");
     }
     
     ~GLS100Node()
