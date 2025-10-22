@@ -1,9 +1,6 @@
 cmake_minimum_required(VERSION 3.8)
 project(pose_monitor)
 
-if(NOT CMAKE_CXX_STANDARD)
-  set(CMAKE_CXX_STANDARD 17)
-endif()
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
@@ -17,6 +14,8 @@ find_package(tf2 REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV REQUIRED)
+
+find_package(launch_ros REQUIRED)
 
 # Add executable
 add_executable(pose_monitor_node src/pose_monitor_node.cpp)
@@ -32,6 +31,7 @@ ament_target_dependencies(pose_monitor_node
 
 target_link_libraries(pose_monitor_node
   ${OpenCV_LIBRARIES}
+  std::filesystem
 )
 
 # Install targets
@@ -41,12 +41,7 @@ install(TARGETS
 )
 
 install(
-  FILES launch/pose_monitor.launch.py
-  DESTINATION share/${PROJECT_NAME}/launch
-)
-
-install(
-  DIRECTORY config
+  DIRECTORY launch/
   DESTINATION share/${PROJECT_NAME}
 )
 
