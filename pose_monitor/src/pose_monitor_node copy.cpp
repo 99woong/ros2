@@ -3,8 +3,6 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <opencv2/opencv.hpp>
-// 1. Add the header for the status message type
-#include <std_msgs/msg/u_int16.hpp> 
 
 #include <deque>
 #include <cmath>
@@ -15,8 +13,6 @@
 #include <sstream>
 #include <chrono>
 #include <ctime>
-
-// Original structs and classes remain the same...
 
 struct PoseData {
     double x;
@@ -35,17 +31,12 @@ class PoseMonitor : public rclcpp::Node {
 private:
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr sub1_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr sub2_;
-    // 2. Add subscription for the status topic
-    rclcpp::Subscription<std_msgs::msg::UInt16>::SharedPtr status_sub_; 
     
     StatisticsData stats1_;
     StatisticsData stats2_;
     
     std::string topic1_;
     std::string topic2_;
-    // 3. Store the current status value
-    uint16_t current_status_ = 0; 
-
     int sample_size_;
     
     std::vector<std::string> available_topics_;
@@ -97,8 +88,6 @@ public:
         
         getAvailableTopics();
         subscribePoseTopics();  
-        // 4. Subscribe to the status topic
-        subscribeStatusTopic(); 
 
         timer_ = this->create_wall_timer(
             std::chrono::milliseconds(33),
@@ -169,8 +158,7 @@ public:
         std::stringstream timestamp;
         timestamp << std::put_time(std::localtime(&now_c), "%Y-%m-%d %H:%M:%S")
                  << "." << std::setfill('0') << std::setw(3) << now_ms.count();
-        
-        // Add current_status_ to CSV log (though not strictly required by prompt, good practice)
+
         csv_file_<< std::fixed << std::setprecision(6)
                  << stats1_.mean.x << ","
                  << stats1_.mean.y << ","
@@ -184,14 +172,12 @@ public:
                  << stats2_.stddev.x << ","
                  << stats2_.stddev.y << ","
                  << stats2_.stddev.yaw << ","
-                 << timestamp.str() << ","
-                 << current_status_ << "\n"; // Log the status
+                 << timestamp.str() << "\n";
         
         csv_file_.flush();
 
         std::stringstream log_entry;
         log_entry << "#" << log_count_ << " | " << timestamp.str() 
-                 << " | S:" << current_status_ // Display status in log
                  << " | V:(" << std::fixed << std::setprecision(2)
                  << stats1_.mean.x << "," << stats1_.mean.y << "," << stats1_.mean.yaw << ","
                  << stats1_.stddev.x << "," << stats1_.stddev.y << "," << stats1_.stddev.yaw 
@@ -206,8 +192,7 @@ public:
             log_history_.pop_front();
         }        
 
-        RCLCPP_INFO(this->get_logger(), "Data saved to CSV at %s, Status: %u", 
-                    timestamp.str().c_str(), current_status_);
+        RCLCPP_INFO(this->get_logger(), "Data saved to CSV at %s", timestamp.str().c_str());
     }
     
     static void mouseCallback(int event, int x, int y, int flags, void* userdata) 
@@ -279,17 +264,6 @@ public:
 
         RCLCPP_INFO(this->get_logger(), "Subscribed to: %s and %s", topic1_.c_str(), topic2_.c_str());
     }
-
-    // 5. Status subscription function
-    void subscribeStatusTopic() 
-    {
-        // Use the topic from the prompt: "gls100/status"
-        status_sub_ = this->create_subscription<std_msgs::msg::UInt16>(
-            "gls100/status", 10,
-            std::bind(&PoseMonitor::statusCallback, this, std::placeholders::_1));
-
-        RCLCPP_INFO(this->get_logger(), "Subscribed to status topic: gls100/status");
-    }
     
     void poseCallback1(const geometry_msgs::msg::PoseStamped::SharedPtr msg) 
     {
@@ -301,11 +275,6 @@ public:
         updateStatistics(stats2_, msg);
     }
     
-    // 6. Status callback function
-    void statusCallback(const std_msgs::msg::UInt16::SharedPtr msg)
-    {
-        current_status_ = msg->data;
-    }
 
     void updateStatistics(StatisticsData& stats, const geometry_msgs::msg::PoseStamped::SharedPtr msg) 
     {
@@ -396,7 +365,7 @@ public:
     }
     
     void drawPoseData(const std::string& title, const StatisticsData& stats, 
-                     int x_offset, int y_offset, cv::Scalar color, double std_m, double std_deg) 
+                     int x_offset, int y_offset, cv::Scalar color) 
     {
         // Title
         drawText(title, x_offset, y_offset, 0.8, color, 2);
@@ -424,16 +393,8 @@ public:
         drawText(cv::format("Yaw: %.2f deg", stats.mean.yaw), x_offset + 10, y);
         y += line_height + 10;
         
-        if(stats.stddev.x < std_m && stats.stddev.y < std_m && stats.stddev.yaw < std_deg)// && stats.stddev.yaw < std_th)
-        {
-            drawText("[ Std Dev ]", x_offset, y, 0.7, cv::Scalar(0, 200, 0), 2);
-        }
-        else
-        {
-            drawText("[ Std Dev ]", x_offset, y, 0.7, cv::Scalar(0, 0, 200), 2);
-        }
         // Standard Deviation
-        // drawText("[ Std Dev ]", x_offset, y, 0.7, cv::Scalar(0, 0, 200), 2);
+        drawText("[ Std Dev ]", x_offset, y, 0.7, cv::Scalar(0, 0, 200), 2);
         y += line_height;
         drawText(cv::format("X: %.6f m", stats.stddev.x), x_offset + 10, y);
         y += line_height;
@@ -479,18 +440,19 @@ public:
     }
 
   
+    // *** 로그 히스토리 에디트박스 그리기 ***
     void drawLogHistory(int x_offset, int y_offset, int width, int height) 
     {
-        // Log box background
+        // 에디트박스 배경
         cv::Rect log_box(x_offset, y_offset, width, height);
         cv::rectangle(display_, log_box, cv::Scalar(255, 255, 255), cv::FILLED);
         cv::rectangle(display_, log_box, cv::Scalar(100, 100, 100), 2);
         
-        // Title
+        // 타이틀
         drawText(cv::format("[Save History - Total: %d]", log_count_), 
                 x_offset + 0, y_offset - 8, 0.6, cv::Scalar(0, 0, 0), 2);
         
-        // Log content
+        // 로그 내용 표시
         int y = y_offset + 25;
         int line_spacing = 20;
         
@@ -519,20 +481,6 @@ public:
         // Title
         drawText("ROS2 Pose Monitor", 20, 40, 1.2, cv::Scalar(0, 0, 0), 2);
         
-
-        if(current_status_)
-        {
-            drawText(cv::format("GLS100 dection : Success"), 
-                     WINDOW_WIDTH/2 + 30, 70, 0.8, cv::Scalar(0, 128, 0), 2);
-        }
-        else
-        {
-            drawText(cv::format("GLS100 dection : Fail"), 
-                     WINDOW_WIDTH/2 + 30, 70, 0.8, cv::Scalar(0, 0, 255), 2);
-        }
-
-        // 7. Draw the Status
-        
         // Draw save button
         drawButton();
         
@@ -544,15 +492,17 @@ public:
                 csv_file_created_ ? cv::Scalar(0, 100, 0) : cv::Scalar(100, 100, 0));
                
         // Left panel - Topic 1
-        drawPoseData(topic1_, stats1_, 30, 90, cv::Scalar(200, 0, 0),0.005, 0.1);
+        drawPoseData(topic1_, stats1_, 30, 90, cv::Scalar(200, 0, 0));
         
-        // Right panel - Topic 2 (start Y lowered to accommodate Status)
-        drawPoseData(topic2_, stats2_, WINDOW_WIDTH/2 + 30, 140, cv::Scalar(0, 150, 0),0.001, 0.15); 
+        // Right panel - Topic 2
+        drawPoseData(topic2_, stats2_, WINDOW_WIDTH/2 + 30, 90, cv::Scalar(0, 150, 0));
         
-        // Bottom section - Log history
+        // Bottom section - Topic list
+        int topic_list_y = 500;
+
+        // *** 로그 히스토리 에디트박스 (우측 하단) ***
         int log_box_x = 10;
-        // Shift Y position down slightly since Topic 2 moved down
-        int log_box_y = 700; 
+        int log_box_y = topic_list_y + 140;
         int log_box_width = WINDOW_WIDTH - log_box_x - 30;
         int log_box_height = 200;
         drawLogHistory(log_box_x, log_box_y, log_box_width, log_box_height);        

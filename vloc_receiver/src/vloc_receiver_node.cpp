@@ -6,7 +6,7 @@ VlocReceiver::VlocReceiver()
     : Node("vloc_receiver_node"), serial_fd_(-1), running_(false)
 {
     // Declare and get parameters
-    this->declare_parameter<std::string>("serial_port", "/dev/ttyUSB0");
+    this->declare_parameter<std::string>("serial_port", "/dev/ttyVLOC");
     this->declare_parameter<int>("baud_rate", 115200);
     
     this->get_parameter("serial_port", serial_port_);
@@ -266,25 +266,11 @@ void VlocReceiver::publishVlocData(const VlocPacket& pkt)
     double sp = sin(pitch * 0.5);
     double cr = cos(roll * 0.5);
     double sr = sin(roll * 0.5);
-    
-    // msg.pose.orientation.w = cr * cp * cy + sr * sp * sy;
-    // msg.pose.orientation.x = sr * cp * cy - cr * sp * sy;
-    // msg.pose.orientation.y = cr * sp * cy + sr * cp * sy;
-    // msg.pose.orientation.z = cr * cp * sy - sr * sp * cy;
 
-    // tf2::Quaternion q(
-    //     msg.pose.orientation.x,
-    //     msg.pose.orientation.y,
-    //     msg.pose.orientation.z,
-    //     msg.pose.orientation.w
-    // );
-    
-    // tf2::Matrix3x3 m(q);
-    // double roll_, pitch_, yaw_;
-    // m.getRPY(roll_, pitch_, yaw_);
-    // pose.yaw = yaw_ * 180.0 / M_PI; // Convert to degrees\
-
-    // std::cout << "after yaw: " << pose.yaw <<std::endl;    
+    msg.pose.orientation.w = cr * cp * cy + sr * sp * sy;
+    msg.pose.orientation.x = sr * cp * cy - cr * sp * sy;
+    msg.pose.orientation.y = cr * sp * cy + sr * cp * sy;
+    msg.pose.orientation.z = cr * cp * sy - sr * sp * cy; 
 
     // 토픽 발행
     pose_pub_->publish(msg);

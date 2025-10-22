@@ -94,7 +94,7 @@ private:
         
         // Read all available messages
         while (CAN_Read(can_handle_, &msg, &timestamp) == PCAN_ERROR_OK) {
-            RCLCPP_INFO(this->get_logger(), "CAN msg received: id=0x%x len=%d", msg.ID, msg.LEN);
+            // RCLCPP_INFO(this->get_logger(), "CAN msg received: id=0x%x len=%d", msg.ID, msg.LEN);
             processCANMessage(msg);
         }
     }
@@ -126,6 +126,14 @@ private:
             uint16_t time_offset = *reinterpret_cast<const uint16_t*>(&msg.DATA[6]);
             
             status_ = status;
+
+            // std::cout << "status(device status) : " <<  (status & 0x8000) << std::endl;
+            // std::cout << "status(marker type) : " <<  ((status & 0x00f0)>>4) << std::endl;
+            // std::cout << "status(tag recognized) : " <<  ((status & 0x0004)>>2) << std::endl;
+            // std::cout << "status(code read) : " <<  ((status && 0x0002)>>1) << std::endl;
+            // std::cout << "status(code detected) : " <<  (status & 0x0001) << std::endl << std::endl;
+
+
             z_position_ = z_raw * 0.0001;  // 0.1mm to meters
             
             // Convert angle (default scaling: pi/32767 rad per increment)
