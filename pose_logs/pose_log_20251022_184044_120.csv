@@ -1,0 +1,2 @@
+vloc_x,vloc_y,vloc_yaw,gls_x,gls_y,gls_yaw,vloc_stddev_x,vloc_stddev_y,vloc_stddev_yaw,gls_stddev_x,gls_stddev_y,gls_stddev_yaw,timestamp,status
+-0.031600,0.060600,1.022000,0.007370,0.007900,178.743126,0.000917,0.000490,0.014697,0.000046,0.000000,0.004789,2025-10-22 18:40:50.810,47

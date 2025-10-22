@@ -28,6 +28,7 @@ struct StatisticsData {
     PoseData current;
     PoseData mean;
     PoseData stddev;
+    PoseData max_stddev;
     std::deque<PoseData> history;
 };
 
@@ -76,7 +77,18 @@ private:
     int stable_count_ = 0; // 안정 상태가 지속된 프레임 수
     const int STABILITY_FRAMES_THRESHOLD = 30; // 약 1초 (30fps 기준)
 
-    // 🚀 추가: 저장 이벤트가 발생했는지 추적하는 플래그
+    //이전 프레임의 포즈 값 저장 (Topic 1과 Topic 2 각각 필요)
+    PoseData last_pose1_; 
+    PoseData last_pose2_; 
+    
+    //1초 카운트 동안 데이터 변화가 있었는지 추적
+    bool data_changed_during_stable_count_ = false; 
+
+    // 변화를 감지할 미세 임계값 (예: 1 마이크로미터 및 1 마이크로도)
+    const double MIN_CHANGE_M = 1e-6;   
+    const double MIN_CHANGE_YAW = 1e-6;
+
+    // 추가: 저장 이벤트가 발생했는지 추적하는 플래그
     bool save_fired_ = false;    
     
     // 안정성 기준 정의
@@ -486,6 +498,10 @@ void PoseMonitor::updateStatistics(StatisticsData& stats, const geometry_msgs::m
     }
     
     calculateStatistics(stats);
+
+    stats.max_stddev.x = std::max(stats.max_stddev.x, stats.stddev.x);
+    stats.max_stddev.y = std::max(stats.max_stddev.y, stats.stddev.y);
+    stats.max_stddev.yaw = std::max(stats.max_stddev.yaw, stats.stddev.yaw);
     
     checkStability();
 }
@@ -606,13 +622,26 @@ void PoseMonitor::drawPoseData(const std::string& title, const StatisticsData& s
 
     y += line_height;
     // 🚀 drawText 인자 수정 (thickness = 1 추가)
-    drawText(cv::format("X: %.6f m", stats.stddev.x), x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
-    y += line_height;
-    drawText(cv::format("Y: %.6f m", stats.stddev.y), x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
-    y += line_height;
-    drawText(cv::format("Yaw: %.4f deg", stats.stddev.yaw), x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
+    // drawText(cv::format("X: %.6f m", stats.stddev.x), x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
+    // y += line_height;
+    // drawText(cv::format("Y: %.6f m", stats.stddev.y), x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
+    // y += line_height;
+    // drawText(cv::format("Yaw: %.4f deg", stats.stddev.yaw), x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
+    // y += line_height;
+    // X Std Dev + Max
+    std::string x_text = cv::format("X: %.6f m (Max: %.6f m)", stats.stddev.x, stats.max_stddev.x);
+    drawText(x_text, x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
     y += line_height;
     
+    // Y Std Dev + Max
+    std::string y_text = cv::format("Y: %.6f m (Max: %.6f m)", stats.stddev.y, stats.max_stddev.y);
+    drawText(y_text, x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
+    y += line_height;
+    
+    // Yaw Std Dev + Max
+    std::string yaw_text = cv::format("Yaw: %.4f deg (Max: %.4f deg)", stats.stddev.yaw, stats.max_stddev.yaw);
+    drawText(yaw_text, x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
+    y += line_height;    
     // 🚀 drawText 인자 수정 (thickness = 1 추가)
     drawText(cv::format("Samples: %d / %d", (int)stats.history.size(), sample_size_), 
             x_offset + 10, y, 0.5, cv::Scalar(100, 100, 100), 1);
@@ -745,6 +774,26 @@ void PoseMonitor::displayCallback()
     // was_stable_ = is_stable_; 
     // ----------------------------------------------------
 
+    bool topic1_changed = 
+        std::abs(stats1_.current.x - last_pose1_.x) > MIN_CHANGE_M ||
+        std::abs(stats1_.current.y - last_pose1_.y) > MIN_CHANGE_M ||
+        std::abs(stats1_.current.yaw - last_pose1_.yaw) > MIN_CHANGE_YAW;
+
+    bool topic2_changed = 
+        std::abs(stats2_.current.x - last_pose2_.x) > MIN_CHANGE_M ||
+        std::abs(stats2_.current.y - last_pose2_.y) > MIN_CHANGE_M ||
+        std::abs(stats2_.current.yaw - last_pose2_.yaw) > MIN_CHANGE_YAW;
+
+    bool data_has_flow = topic1_changed && topic2_changed;
+
+
+    // 🚀 1초 카운트 기간 동안 데이터 흐름(변화)이 한 번이라도 있었는지 누적 추적
+    if (data_has_flow) {
+        data_changed_during_stable_count_ = true;
+    }    
+
+    // std::cout << "change : " << topic1_changed << " " << topic2_changed << " " << data_has_flow << std::endl;
+
     // ----------------------------------------------------
     // 자동 저장 로직 실행 (1초 지연 및 반복 저장 방지)
     // ----------------------------------------------------
@@ -753,6 +802,7 @@ void PoseMonitor::displayCallback()
         // 🚀 이동/불안정 상태: 카운터 및 저장 플래그 리셋
         stable_count_ = 0;
         save_fired_ = false; // 이동이 감지되면 다음 저장을 허용
+        data_changed_during_stable_count_ = false;
     }
     else 
     {
@@ -766,23 +816,49 @@ void PoseMonitor::displayCallback()
         }
     }
     
+    // if (auto_save_enabled_) 
+    // {
+    //     // 🚀 임계값에 도달했고, 아직 저장이 되지 않았다면 (save_fired_가 false)
+    //     if (stable_count_ == STABILITY_FRAMES_THRESHOLD && save_fired_ == false) 
+    //     {
+    //         saveToCSV(); 
+    //         RCLCPP_INFO(this->get_logger(), "AutoSave Triggered: Stable state achieved and held for 1 second.");
+            
+    //         // 🚀 저장 완료 플래그 설정: 다음 이동이 있을 때까지 저장 방지
+    //         save_fired_ = true; 
+            
+    //         // stable_count_는 이미 임계값에 도달했으므로 더 이상 증가하지 않음
+    //         // (is_stable_이 계속 true이고 save_fired_가 true이면 stable_count_는 증가하지 않음)
+    //     }
+    // }    
     if (auto_save_enabled_) 
-    {
-        // 🚀 임계값에 도달했고, 아직 저장이 되지 않았다면 (save_fired_가 false)
-        if (stable_count_ == STABILITY_FRAMES_THRESHOLD && save_fired_ == false) 
+        {
+        // 🚀 저장 조건 확인: 
+        // 1. 임계값에 도달했고 (1초 유지)
+        // 2. 아직 저장이 되지 않았으며
+        // 3. AND (추가 조건) 1초 동안 포즈 값이 변화했을 때 (데이터 정체 방지)
+        if (stable_count_ == STABILITY_FRAMES_THRESHOLD && 
+            save_fired_ == false &&
+            data_changed_during_stable_count_ == true) 
         {
             saveToCSV(); 
-            RCLCPP_INFO(this->get_logger(), "AutoSave Triggered: Stable state achieved and held for 1 second.");
+            RCLCPP_INFO(this->get_logger(), "AutoSave Triggered: Stable state achieved and held for 1 second with data flow.");
             
-            // 🚀 저장 완료 플래그 설정: 다음 이동이 있을 때까지 저장 방지
+            // 저장 완료 플래그 설정
             save_fired_ = true; 
-            
-            // stable_count_는 이미 임계값에 도달했으므로 더 이상 증가하지 않음
-            // (is_stable_이 계속 true이고 save_fired_가 true이면 stable_count_는 증가하지 않음)
         }
-    }    
-
-
+        else if (stable_count_ == STABILITY_FRAMES_THRESHOLD && save_fired_ == false)
+        {
+            // 1초 안정 상태는 달성했으나, 데이터 정체로 인해 저장을 건너뛴 경우
+             RCLCPP_WARN(this->get_logger(), "AutoSave Skipped: Stable state achieved but no data updated during 1 second count.");
+             
+             // 다음 이동이 있을 때까지 저장을 시도하지 않도록 플래그 설정
+             save_fired_ = true; 
+        }
+    }
+    
+    last_pose1_ = stats1_.current;
+    last_pose2_ = stats2_.current;
 
     int key = cv::waitKey(1);
     if (key == 'q' || key == 27) 
@@ -801,6 +877,27 @@ void PoseMonitor::displayCallback()
     else if (key == 'n') 
     { 
         prepareNewCSV();
+    }
+    else if (key == 'c') 
+    {
+        // Topic 1 (VLOC) 통계 리셋
+        stats1_.history.clear();
+        stats1_.mean = {0.0, 0.0, 0.0};
+        stats1_.stddev = {0.0, 0.0, 0.0};
+        stats1_.max_stddev = {0.0, 0.0, 0.0}; // 최대 표준 편차도 리셋
+
+        // Topic 2 (GLS) 통계 리셋
+        stats2_.history.clear();
+        stats2_.mean = {0.0, 0.0, 0.0};
+        stats2_.stddev = {0.0, 0.0, 0.0};
+        stats2_.max_stddev = {0.0, 0.0, 0.0}; // 최대 표준 편차도 리셋
+        
+        // 안정성 관련 플래그도 리셋
+        stable_count_ = 0;
+        save_fired_ = false;
+        data_changed_during_stable_count_ = false;
+
+        RCLCPP_INFO(this->get_logger(), "Statistics Reset: 'c' key pressed. History and Max StdDev cleared.");
     }
 }
 
