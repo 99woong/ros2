@@ -30,7 +30,8 @@ struct StatisticsData {
     PoseData stddev;
     PoseData max_stddev;
     std::deque<PoseData> history;
-
+    rclcpp::Time last_msg_time; // 마지막 메시지 수신 시간
+    int msg_count = 0;           // 1초 동안 받은 메시지 수
     double rate_hz = 0.0;        // 현재 계산된 패킷 레이트 (Hz)    
 };
 
@@ -40,13 +41,6 @@ private:
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr sub2_;
     rclcpp::Subscription<std_msgs::msg::UInt16>::SharedPtr status_sub_; 
     
-    rclcpp::TimerBase::SharedPtr rate_timer_;
-    rclcpp::CallbackGroup::SharedPtr timer_callback_group_;
-    
-    // 각 토픽별 1초간 메시지 수신 카운터
-    std::atomic<int> msg_count1_ = 0; 
-    std::atomic<int> msg_count2_ = 0;
-
     StatisticsData stats1_;
     StatisticsData stats2_;
     
@@ -109,10 +103,7 @@ private:
 
     const std::string LOG_FOLDER = "/home/zenix/pose_logs/"; 
     
-    void rateTimerCallback();
-    void updateRate(StatisticsData& stats, int count);
-
-    // PRIVATE 멤버 함수 선언 (thickness 기본 인자 추가)
+    // 🚀 PRIVATE 멤버 함수 선언 (thickness 기본 인자 추가)
     void updateStatistics(StatisticsData& stats, const geometry_msgs::msg::PoseStamped::SharedPtr msg);
     void calculateStatistics(StatisticsData& stats);
     void checkStability(); 
@@ -141,6 +132,7 @@ public:
     void getAvailableTopics();
     void subscribePoseTopics();
     void subscribeStatusTopic();
+    void updateRate(StatisticsData& stats);
 
     void poseCallback1(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
     void poseCallback2(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
@@ -195,14 +187,6 @@ PoseMonitor::PoseMonitor() : Node("pose_monitor_node"),
     
     save_button_rect_ = cv::Rect(WINDOW_WIDTH - 250, 10, 230, 40);
     
-    timer_callback_group_ = this->create_callback_group(
-        rclcpp::CallbackGroupType::MutuallyExclusive);
-        
-    rate_timer_ = this->create_wall_timer(
-        std::chrono::seconds(1), 
-        std::bind(&PoseMonitor::rateTimerCallback, this), 
-        timer_callback_group_);
-
     getAvailableTopics();
     subscribePoseTopics();  
     subscribeStatusTopic(); 
@@ -476,32 +460,43 @@ void PoseMonitor::subscribeStatusTopic()
     RCLCPP_INFO(this->get_logger(), "Subscribed to status topic: gls100/status");
 }
 
-void PoseMonitor::rateTimerCallback()
+void PoseMonitor::updateRate(StatisticsData& stats)
 {
-    // Topic 1 레이트 업데이트
-    updateRate(stats1_, msg_count1_.exchange(0)); // 현재 카운트를 읽고 0으로 리셋
+    rclcpp::Time now = this->get_clock()->now();
     
-    // Topic 2 레이트 업데이트
-    updateRate(stats2_, msg_count2_.exchange(0)); // 현재 카운트를 읽고 0으로 리셋
-}
+    // 첫 메시지인 경우 초기화
+    if (stats.msg_count == 0) {
+        stats.last_msg_time = now;
+        stats.msg_count = 1;
+        return;
+    }
 
-// StatisticsData에 레이트 값을 적용하는 함수
-void PoseMonitor::updateRate(StatisticsData& stats, int count)
-{
-    // 타이머 주기가 정확히 1초이므로, 카운트 수 = 레이트 (Hz)
-    stats.rate_hz = (double)count;
+    stats.msg_count++;
+    
+    // 1초 이상 경과했는지 확인
+    double elapsed_s = (now - stats.last_msg_time).seconds();
+    if (elapsed_s >= 1.0) {
+        // 레이트 계산
+        stats.rate_hz = (double)stats.msg_count / elapsed_s;
+        
+        // 다음 1초 구간을 위해 리셋
+        stats.last_msg_time = now;
+        stats.msg_count = 0; // 다음 카운트를 시작하기 위해 0으로 설정 (첫 메시지가 1로 시작하면 1로 설정 가능)
+                             // 또는 1로 설정하고, 콜백에서 ++msg_count를 제거하여 루프 시작 시 1로 시작하게 할 수도 있습니다. 
+                             // 여기서는 0으로 리셋하고, 다음 콜백에서 1부터 시작하도록 유지합니다.
+    }
 }
 
 void PoseMonitor::poseCallback1(const geometry_msgs::msg::PoseStamped::SharedPtr msg) 
 {
     updateStatistics(stats1_, msg);
-    msg_count1_++;
+    updateRate(stats1_);
 }
 
 void PoseMonitor::poseCallback2(const geometry_msgs::msg::PoseStamped::SharedPtr msg) 
 {
     updateStatistics(stats2_, msg);
-    msg_count2_++;
+    updateRate(stats2_);
 }
 
 void PoseMonitor::statusCallback(const std_msgs::msg::UInt16::SharedPtr msg)
