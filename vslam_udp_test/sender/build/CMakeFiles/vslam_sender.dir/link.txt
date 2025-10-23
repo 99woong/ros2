@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/vslam_sender.dir/vslam_udp_sender.cpp.o -o vslam_sender  -lpthread 
