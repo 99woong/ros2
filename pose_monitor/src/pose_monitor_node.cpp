@@ -842,7 +842,6 @@ void PoseMonitor::drawGridUI(int x_offset, int y_offset)
     // ----------------------------------------------------
     double mean_x = stats2_.mean.x;
     double mean_y = stats2_.mean.y;
-    double mean_yaw_deg = stats2_.mean.yaw;
 
     double rotated_x = mean_x;
     double rotated_y = mean_y;
@@ -869,31 +868,7 @@ void PoseMonitor::drawGridUI(int x_offset, int y_offset)
     
     // 포인트 그리기 (파란색)
     cv::circle(display_, cv::Point(pos_x, pos_y), 5, cv::Scalar(255, 0, 0), cv::FILLED);
-
-    double yaw_rad = mean_yaw_deg * M_PI / 180.0; // Yaw을 라디안으로 변환
-    // 회전 변환 행렬은 (cosθ, -sinθ), (sinθ, cosθ)를 사용하지만,
-    // 각도 변환이 90도 단위이므로 간단하게 처리
-    double rotated_yaw_rad = yaw_rad;
-
-    if (map_rotation_deg_ == 90) {
-        rotated_yaw_rad = yaw_rad + M_PI / 2.0;
-    } else if (map_rotation_deg_ == 180) {
-        rotated_yaw_rad = yaw_rad + M_PI;
-    } else if (map_rotation_deg_ == 270) {
-        rotated_yaw_rad = yaw_rad - M_PI / 2.0; // 또는 + 3*M_PI/2.0
-    }
     
-    // Yaw 라디안을 0 ~ 2*PI 범위로 정규화 (선택 사항이지만 안전함)
-    rotated_yaw_rad = std::fmod(rotated_yaw_rad, 2.0 * M_PI);
-    if (rotated_yaw_rad < 0) rotated_yaw_rad += 2.0 * M_PI;    
-
-    const int HEADING_LINE_LENGTH = 15;
-    
-    int end_x = pos_x + (int)(HEADING_LINE_LENGTH * std::cos(rotated_yaw_rad));
-    int end_y = pos_y - (int)(HEADING_LINE_LENGTH * std::sin(rotated_yaw_rad)); // 화면 Y축은 아래로 증가하므로 (-)
-
-    cv::line(display_, cv::Point(pos_x, pos_y), cv::Point(end_x, end_y), cv::Scalar(0, 0, 255), 2);
-
     // 원점 표시 (녹색)
     cv::circle(display_, origin, 3, cv::Scalar(0, 150, 0), cv::FILLED); 
     
@@ -915,8 +890,7 @@ void PoseMonitor::drawGridUI(int x_offset, int y_offset)
     // 현재 위치 좌표 텍스트
     // std::string pos_text = cv::format("(X: %.3f, Y: %.3f m)", mean_x, mean_y);
     // drawText(pos_text, x_offset + 5, y_offset + GRID_SIZE + 20, 0.6, cv::Scalar(255, 0, 0), 1);
-    std::string pos_text = cv::format("(X: %.3f, Y: %.3f m) Yaw: %.2f deg | Rot: %d deg", 
-                                        rotated_x, rotated_y, mean_yaw_deg, map_rotation_deg_); // 🚀 Yaw 추가
+    std::string pos_text = cv::format("(X: %.3f, Y: %.3f m) Rot: %d deg", rotated_x, rotated_y, map_rotation_deg_);
     drawText(pos_text, x_offset + 5, y_offset + GRID_SIZE + 20, 0.6, cv::Scalar(255, 0, 0), 1);}
 
 // void PoseMonitor::drawGridUI(int x_offset, int y_offset)
