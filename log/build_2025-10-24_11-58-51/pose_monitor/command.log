@@ -1,0 +1,2 @@
+Invoking command in '/home/zenix/git/ros2/build/pose_monitor': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/zenix/git/ros2/build/pose_monitor -- -j28 -l28
+Invoked command in '/home/zenix/git/ros2/build/pose_monitor' returned '-2': CMAKE_PREFIX_PATH=${CMAKE_PREFIX_PATH}:/opt/ros/jazzy DEBUGINFOD_URLS=https://debuginfod.ubuntu.com /usr/bin/cmake --build /home/zenix/git/ros2/build/pose_monitor -- -j28 -l28

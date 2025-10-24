@@ -93,19 +93,19 @@
 			{
 				"command" : 0,
 				"file" : 0,
-				"line" : 19,
+				"line" : 22,
 				"parent" : 0
 			},
 			{
 				"command" : 1,
 				"file" : 0,
-				"line" : 35,
+				"line" : 38,
 				"parent" : 0
 			},
 			{
 				"command" : 3,
 				"file" : 0,
-				"line" : 21,
+				"line" : 24,
 				"parent" : 0
 			},
 			{
@@ -117,13 +117,13 @@
 			{
 				"command" : 2,
 				"file" : 0,
-				"line" : 30,
+				"line" : 33,
 				"parent" : 0
 			},
 			{
 				"command" : 6,
 				"file" : 0,
-				"line" : 14,
+				"line" : 17,
 				"parent" : 0
 			},
 			{
@@ -383,7 +383,7 @@
 			{
 				"command" : 6,
 				"file" : 0,
-				"line" : 10,
+				"line" : 13,
 				"parent" : 0
 			},
 			{
@@ -521,7 +521,7 @@
 			{
 				"command" : 6,
 				"file" : 0,
-				"line" : 15,
+				"line" : 18,
 				"parent" : 0
 			},
 			{
@@ -651,7 +651,7 @@
 			{
 				"command" : 6,
 				"file" : 0,
-				"line" : 11,
+				"line" : 14,
 				"parent" : 0
 			},
 			{
@@ -879,7 +879,7 @@
 			{
 				"command" : 7,
 				"file" : 0,
-				"line" : 5,
+				"line" : 8,
 				"parent" : 0
 			},
 			{
@@ -895,6 +895,9 @@
 		{
 			"compileCommandFragments" : 
 			[
+				{
+					"fragment" : "-std=gnu++17"
+				},
 				{
 					"backtrace" : 152,
 					"fragment" : "-Wall"
@@ -1128,6 +1131,15 @@
 				}
 			],
 			"language" : "CXX",
+			"languageStandard" : 
+			{
+				"backtraces" : 
+				[
+					4,
+					4
+				],
+				"standard" : "17"
+			},
 			"sourceIndexes" : 
 			[
 				0

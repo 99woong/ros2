@@ -5,7 +5,7 @@ set(pose_monitor_BUILD_DEPENDS "rclcpp" "geometry_msgs" "std_msgs" "tf2" "tf2_ge
 set(pose_monitor_BUILDTOOL_DEPENDS "ament_cmake")
 set(pose_monitor_BUILD_EXPORT_DEPENDS "rclcpp" "geometry_msgs" "std_msgs" "tf2" "tf2_geometry_msgs" "cv_bridge")
 set(pose_monitor_BUILDTOOL_EXPORT_DEPENDS )
-set(pose_monitor_EXEC_DEPENDS "rclcpp" "geometry_msgs" "std_msgs" "tf2" "tf2_geometry_msgs" "cv_bridge")
+set(pose_monitor_EXEC_DEPENDS "launch" "launch_ros" "ament_index_python" "rclcpp" "geometry_msgs" "std_msgs" "tf2" "tf2_geometry_msgs" "cv_bridge")
 set(pose_monitor_TEST_DEPENDS "ament_lint_auto" "ament_lint_common")
 set(pose_monitor_GROUP_DEPENDS )
 set(pose_monitor_MEMBER_OF_GROUPS )

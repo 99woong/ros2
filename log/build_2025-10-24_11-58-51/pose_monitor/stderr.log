@@ -1,0 +1,3 @@
+gmake[2]: *** [CMakeFiles/pose_monitor_node.dir/build.make:76: CMakeFiles/pose_monitor_node.dir/src/pose_monitor_node.cpp.o] 인터럽트
+gmake[1]: *** [CMakeFiles/Makefile2:137: CMakeFiles/pose_monitor_node.dir/all] 인터럽트
+gmake: *** [Makefile:146: all] 인터럽트

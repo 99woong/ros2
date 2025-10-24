@@ -1,1 +1,1 @@
-cv_bridge:geometry_msgs:rclcpp:std_msgs:tf2:tf2_geometry_msgs
+ament_index_python:cv_bridge:geometry_msgs:launch:launch_ros:rclcpp:std_msgs:tf2:tf2_geometry_msgs
