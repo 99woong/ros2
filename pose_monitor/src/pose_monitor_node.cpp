@@ -107,6 +107,9 @@ private:
     double std_m_threshold_;
     double std_yaw_threshold_;
 
+    int grid_x_offset; 
+    int grid_y_offset; 
+
     // const int GRID_SIZE = 250;     // 그리드 UI의 크기 (픽셀)
     // const int GRID_SCALE = 100;    // 1m당 픽셀 수 (예: 100 픽셀/m)
     
@@ -114,8 +117,12 @@ private:
     
     // 30mm를 표시하기 위해 스케일 조정 (0.03m을 100~125픽셀로 표시)
     // 0.03m -> 125 픽셀로 설정하면 1m당 약 4166 픽셀이 됨 (4166 pixels/m)
-    const double GRID_M_RANGE = 0.03;  // 표시할 X, Y 범위 (m). 즉, [-0.03m, 0.03m]
+    const double GRID_M_RANGE = 0.06;  // 표시할 X, Y 범위 (m). 즉, [-0.03m, 0.03m]
     const double GRID_SCALE = GRID_SIZE / (GRID_M_RANGE * 2.0); // 250 / 0.06 = 4166.67 pixels/m
+    
+    int map_rotation_deg_ = 0; // 0, 90, 180, 270
+    cv::Rect rotate_button_rect_;
+    
     const std::string LOG_FOLDER = "/home/zenix/pose_logs/"; 
     
     void rateTimerCallback();
@@ -156,6 +163,7 @@ public:
     void poseCallback2(const geometry_msgs::msg::PoseStamped::SharedPtr msg);
     void statusCallback(const std_msgs::msg::UInt16::SharedPtr msg);
     void displayCallback();
+    void drawRotateButton(int x_offset, int y_offset);
     
     static void mouseCallback(int event, int x, int y, int flags, void* userdata);
 };
@@ -193,6 +201,10 @@ PoseMonitor::PoseMonitor() : Node("pose_monitor_node"),
     
     generateCSVFilename();
     
+    rotate_button_rect_ = cv::Rect(WINDOW_WIDTH / 2 + 300, 
+                                   100 + GRID_SIZE + 80, // y_offset (400) + GRID_SIZE (250) + 여백 (40)
+                                   GRID_SIZE, 30);      // 250x30 픽셀 크기
+
     // 🚀 WINDOW_WIDTH, WINDOW_HEIGHT 순서 변경 (OpenCV Mat 생성 시 행, 열 순서)
     display_ = cv::Mat(WINDOW_HEIGHT, WINDOW_WIDTH, CV_8UC3, cv::Scalar(240, 240, 240)); 
     cv::namedWindow("Pose Monitor", cv::WINDOW_AUTOSIZE);
@@ -228,6 +240,29 @@ PoseMonitor::~PoseMonitor()
     {
         csv_file_.close();
     }
+}
+
+void PoseMonitor::drawRotateButton(int x_offset, int y_offset)
+{
+    std::string button_text = cv::format("Rotate Map (%d deg)", map_rotation_deg_);
+    
+    // 버튼 색상 설정
+    cv::Scalar button_color = mouse_over_button_ ? 
+        cv::Scalar(100, 100, 200) : cv::Scalar(150, 150, 200); 
+    
+    cv::rectangle(display_, rotate_button_rect_, button_color, cv::FILLED);
+    cv::rectangle(display_, rotate_button_rect_, cv::Scalar(50, 50, 50), 2);
+    
+    int baseline = 0;
+    cv::Size text_size = cv::getTextSize(button_text, cv::FONT_HERSHEY_SIMPLEX, 
+                                         0.6, 1, &baseline);
+    
+    cv::Point text_pos(
+        rotate_button_rect_.x + (rotate_button_rect_.width - text_size.width) / 2,
+        rotate_button_rect_.y + (rotate_button_rect_.height + text_size.height) / 2
+    );
+    
+    drawText(button_text, text_pos.x, text_pos.y, 0.6, cv::Scalar(255, 255, 255), 1);
 }
 
 void PoseMonitor::generateCSVFilename() 
@@ -416,10 +451,16 @@ void PoseMonitor::mouseCallback(int event, int x, int y, int flags, void* userda
             RCLCPP_INFO(monitor->get_logger(), "AutoSave toggled: %s", 
                         monitor->auto_save_enabled_ ? "ON" : "OFF");
         }
+        else if (monitor->rotate_button_rect_.contains(cv::Point(x, y))) 
+        {
+            monitor->map_rotation_deg_ = (monitor->map_rotation_deg_ + 90) % 360;
+            RCLCPP_INFO(monitor->get_logger(), "Map Rotated to: %d degrees", monitor->map_rotation_deg_);
+        }    
     } 
     else if (event == cv::EVENT_MOUSEMOVE) 
     {
-        monitor->mouse_over_button_ = monitor->save_button_rect_.contains(cv::Point(x, y));
+        monitor->mouse_over_button_ = monitor->save_button_rect_.contains(cv::Point(x, y)) ||
+                                       monitor->rotate_button_rect_.contains(cv::Point(x, y));
     }
     // flags는 사용되지 않음
     (void)flags; 
@@ -767,7 +808,7 @@ void PoseMonitor::drawGridUI(int x_offset, int y_offset)
     // 타이틀
     drawText("[ GLS Position(Mean) Map ]", x_offset, y_offset - 8, 0.65, cv::Scalar(0, 0, 0), 2);
     
-cv::Point origin(x_offset + GRID_SIZE / 2, y_offset + GRID_SIZE / 2);
+    cv::Point origin(x_offset + GRID_SIZE / 2, y_offset + GRID_SIZE / 2);
     
     // ----------------------------------------------------
     // 좌표축 및 그리드 선 (0.01m = 10mm 간격으로 변경)
@@ -784,7 +825,7 @@ cv::Point origin(x_offset + GRID_SIZE / 2, y_offset + GRID_SIZE / 2);
     double step_m = 0.01; // 10mm
     
     // -0.02m, -0.01m, 0.01m, 0.02m 위치에 보조선 그리기 (0.03m는 테두리이므로 제외)
-    for (int i = -2; i <= 2; ++i) { 
+    for (int i = -5; i <= 5; ++i) { 
         if (i == 0) continue;
         
         // 픽셀 거리 계산: i * step_m * GRID_SCALE
@@ -801,10 +842,25 @@ cv::Point origin(x_offset + GRID_SIZE / 2, y_offset + GRID_SIZE / 2);
     // ----------------------------------------------------
     double mean_x = stats2_.mean.x;
     double mean_y = stats2_.mean.y;
+
+    double rotated_x = mean_x;
+    double rotated_y = mean_y;
+
+    // 🚀 추가: 90도 단위 회전 변환 적용
+    if (map_rotation_deg_ == 90) {
+        rotated_x = -mean_y;
+        rotated_y = mean_x;
+    } else if (map_rotation_deg_ == 180) {
+        rotated_x = -mean_x;
+        rotated_y = -mean_y;
+    } else if (map_rotation_deg_ == 270) {
+        rotated_x = mean_y;
+        rotated_y = -mean_x;
+    }    
     
     // 픽셀 좌표로 변환 (Y는 화면 좌표계에서 아래로 증가하므로 부호 반전)
-    int pos_x = origin.x + (int)(mean_x * GRID_SCALE);
-    int pos_y = origin.y - (int)(mean_y * GRID_SCALE); 
+    int pos_x = origin.x + (int)(rotated_x * GRID_SCALE);
+    int pos_y = origin.y - (int)(rotated_y * GRID_SCALE); 
     
     // 위치를 그리드 박스 안에 클리핑 (여전히 그리드 범위 내에 위치)
     pos_x = std::max(x_offset, std::min(x_offset + GRID_SIZE, pos_x));
@@ -819,22 +875,23 @@ cv::Point origin(x_offset + GRID_SIZE / 2, y_offset + GRID_SIZE / 2);
     // ----------------------------------------------------
     // 좌표 라벨 (0.03m 경계 표시)
     // ----------------------------------------------------
-    int boundary_pixel = (int)(GRID_M_RANGE * GRID_SCALE); // 0.03m를 픽셀로 변환 (125 픽셀)
+    // int boundary_pixel = (int)(GRID_M_RANGE * GRID_SCALE); // 0.03m를 픽셀로 변환 (125 픽셀)
 
-    // X = +30mm 라벨
-    drawText("+30mm", origin.x + boundary_pixel - 45, origin.y + 15, 0.4, cv::Scalar(0, 0, 0), 1);
-    // X = -30mm 라벨
-    drawText("-30mm", origin.x - boundary_pixel + 5, origin.y + 15, 0.4, cv::Scalar(0, 0, 0), 1);
+    // // X = +30mm 라벨
+    // drawText("+60mm", origin.x + boundary_pixel - 45, origin.y + 15, 0.4, cv::Scalar(0, 0, 0), 1);
+    // // X = -30mm 라벨
+    // drawText("-60mm", origin.x - boundary_pixel + 5, origin.y + 15, 0.4, cv::Scalar(0, 0, 0), 1);
     
-    // Y = +30mm 라벨 (화면상으로는 위쪽)
-    drawText("+30mm", origin.x + 5, origin.y - boundary_pixel + 15, 0.4, cv::Scalar(0, 0, 0), 1);
-    // Y = -30mm 라벨 (화면상으로는 아래쪽)
-    drawText("-30mm", origin.x + 5, origin.y + boundary_pixel - 5, 0.4, cv::Scalar(0, 0, 0), 1);
+    // // Y = +30mm 라벨 (화면상으로는 위쪽)
+    // drawText("+60mm", origin.x + 5, origin.y - boundary_pixel + 15, 0.4, cv::Scalar(0, 0, 0), 1);
+    // // Y = -30mm 라벨 (화면상으로는 아래쪽)
+    // drawText("-60mm", origin.x + 5, origin.y + boundary_pixel - 5, 0.4, cv::Scalar(0, 0, 0), 1);
 
     // 현재 위치 좌표 텍스트
-    std::string pos_text = cv::format("(X: %.3f, Y: %.3f m)", mean_x, mean_y);
-    drawText(pos_text, x_offset + 5, y_offset + GRID_SIZE + 20, 0.6, cv::Scalar(255, 0, 0), 1);
-}
+    // std::string pos_text = cv::format("(X: %.3f, Y: %.3f m)", mean_x, mean_y);
+    // drawText(pos_text, x_offset + 5, y_offset + GRID_SIZE + 20, 0.6, cv::Scalar(255, 0, 0), 1);
+    std::string pos_text = cv::format("(X: %.3f, Y: %.3f m) Rot: %d deg", rotated_x, rotated_y, map_rotation_deg_);
+    drawText(pos_text, x_offset + 5, y_offset + GRID_SIZE + 20, 0.6, cv::Scalar(255, 0, 0), 1);}
 
 // void PoseMonitor::drawGridUI(int x_offset, int y_offset)
 // {
@@ -941,9 +998,12 @@ void PoseMonitor::displayCallback()
     
     drawPoseData(topic2_, stats2_, WINDOW_WIDTH/2 + 30, 140, cv::Scalar(0, 150, 0), std_m_threshold_, std_yaw_threshold_); 
     
-    int grid_x_offset = WINDOW_WIDTH / 2 + 300; 
-    int grid_y_offset = 150; 
+    grid_x_offset = WINDOW_WIDTH / 2 + 300; 
+    grid_y_offset = 150; 
     drawGridUI(grid_x_offset, grid_y_offset);
+
+    int button_y_offset = grid_y_offset + GRID_SIZE + 40; 
+    drawRotateButton(grid_x_offset+100, button_y_offset-200);    
 
     int log_box_x = 10;
     int log_box_y = 700; 
