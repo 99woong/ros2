@@ -107,9 +107,15 @@ private:
     double std_m_threshold_;
     double std_yaw_threshold_;
 
-    const int GRID_SIZE = 250;     // 그리드 UI의 크기 (픽셀)
-    const int GRID_SCALE = 100;    // 1m당 픽셀 수 (예: 100 픽셀/m)
-
+    // const int GRID_SIZE = 250;     // 그리드 UI의 크기 (픽셀)
+    // const int GRID_SCALE = 100;    // 1m당 픽셀 수 (예: 100 픽셀/m)
+    
+    const int GRID_SIZE = 250;       // 그리드 UI의 크기는 유지 (픽셀)
+    
+    // 30mm를 표시하기 위해 스케일 조정 (0.03m을 100~125픽셀로 표시)
+    // 0.03m -> 125 픽셀로 설정하면 1m당 약 4166 픽셀이 됨 (4166 pixels/m)
+    const double GRID_M_RANGE = 0.03;  // 표시할 X, Y 범위 (m). 즉, [-0.03m, 0.03m]
+    const double GRID_SCALE = GRID_SIZE / (GRID_M_RANGE * 2.0); // 250 / 0.06 = 4166.67 pixels/m
     const std::string LOG_FOLDER = "/home/zenix/pose_logs/"; 
     
     void rateTimerCallback();
@@ -761,34 +767,37 @@ void PoseMonitor::drawGridUI(int x_offset, int y_offset)
     // 타이틀
     drawText("[ GLS Position(Mean) Map ]", x_offset, y_offset - 8, 0.65, cv::Scalar(0, 0, 0), 2);
     
-    // 원점 (그리드 중앙)
-    cv::Point origin(x_offset + GRID_SIZE / 2, y_offset + GRID_SIZE / 2);
+cv::Point origin(x_offset + GRID_SIZE / 2, y_offset + GRID_SIZE / 2);
     
     // ----------------------------------------------------
-    // 좌표축 및 그리드 선
+    // 좌표축 및 그리드 선 (0.01m = 10mm 간격으로 변경)
     // ----------------------------------------------------
     cv::Scalar axis_color(100, 100, 100);
     cv::Scalar grid_color(220, 220, 220);
     int center_thickness = 1;
     
-    // X축 (빨간색) 및 Y축 (녹색)
-    cv::line(display_, cv::Point(x_offset, origin.y), cv::Point(x_offset + GRID_SIZE, origin.y), axis_color, center_thickness); // X축 (가로)
-    cv::line(display_, cv::Point(origin.x, y_offset), cv::Point(origin.x, y_offset + GRID_SIZE), axis_color, center_thickness); // Y축 (세로)
+    // X축 (가로) 및 Y축 (세로)
+    cv::line(display_, cv::Point(x_offset, origin.y), cv::Point(x_offset + GRID_SIZE, origin.y), axis_color, center_thickness); 
+    cv::line(display_, cv::Point(origin.x, y_offset), cv::Point(origin.x, y_offset + GRID_SIZE), axis_color, center_thickness); 
     
-    // 보조 그리드 선 (1m 간격)
-    int grid_step = GRID_SCALE; // 100 픽셀/m
+    // 보조 그리드 선 (10mm = 0.01m 간격)
+    double step_m = 0.01; // 10mm
     
-    for (int i = -1; i <= 1; ++i) { // -1m, 1m 위치에 보조선
+    // -0.02m, -0.01m, 0.01m, 0.02m 위치에 보조선 그리기 (0.03m는 테두리이므로 제외)
+    for (int i = -2; i <= 2; ++i) { 
         if (i == 0) continue;
         
-        // 수직선 (X=1m, X=-1m)
-        cv::line(display_, cv::Point(origin.x + i * grid_step, y_offset), cv::Point(origin.x + i * grid_step, y_offset + GRID_SIZE), grid_color, 1);
-        // 수평선 (Y=1m, Y=-1m)
-        cv::line(display_, cv::Point(x_offset, origin.y + i * grid_step), cv::Point(x_offset + GRID_SIZE, origin.y + i * grid_step), grid_color, 1);
+        // 픽셀 거리 계산: i * step_m * GRID_SCALE
+        int pixel_step = (int)(i * step_m * GRID_SCALE); 
+        
+        // 수직선 (X)
+        cv::line(display_, cv::Point(origin.x + pixel_step, y_offset), cv::Point(origin.x + pixel_step, y_offset + GRID_SIZE), grid_color, 1);
+        // 수평선 (Y)
+        cv::line(display_, cv::Point(x_offset, origin.y - pixel_step), cv::Point(x_offset + GRID_SIZE, origin.y - pixel_step), grid_color, 1); 
     }
 
     // ----------------------------------------------------
-    // GLS 평균 위치 표시
+    // GLS 평균 위치 표시 (GRID_SCALE 사용)
     // ----------------------------------------------------
     double mean_x = stats2_.mean.x;
     double mean_y = stats2_.mean.y;
@@ -797,7 +806,7 @@ void PoseMonitor::drawGridUI(int x_offset, int y_offset)
     int pos_x = origin.x + (int)(mean_x * GRID_SCALE);
     int pos_y = origin.y - (int)(mean_y * GRID_SCALE); 
     
-    // 위치를 그리드 박스 안에 클리핑
+    // 위치를 그리드 박스 안에 클리핑 (여전히 그리드 범위 내에 위치)
     pos_x = std::max(x_offset, std::min(x_offset + GRID_SIZE, pos_x));
     pos_y = std::max(y_offset, std::min(y_offset + GRID_SIZE, pos_y));
     
@@ -808,16 +817,94 @@ void PoseMonitor::drawGridUI(int x_offset, int y_offset)
     cv::circle(display_, origin, 3, cv::Scalar(0, 150, 0), cv::FILLED); 
     
     // ----------------------------------------------------
-    // 좌표 라벨
+    // 좌표 라벨 (0.03m 경계 표시)
     // ----------------------------------------------------
-    drawText("X", x_offset + GRID_SIZE, origin.y - 5, 0.4, cv::Scalar(0, 0, 0), 1);
-    drawText("Y", origin.x + 5, y_offset + 15, 0.4, cv::Scalar(0, 0, 0), 1);
-    drawText("(0,0)", origin.x + 5, origin.y - 5, 0.4, cv::Scalar(0, 0, 0), 1);
+    int boundary_pixel = (int)(GRID_M_RANGE * GRID_SCALE); // 0.03m를 픽셀로 변환 (125 픽셀)
+
+    // X = +30mm 라벨
+    drawText("+30mm", origin.x + boundary_pixel - 45, origin.y + 15, 0.4, cv::Scalar(0, 0, 0), 1);
+    // X = -30mm 라벨
+    drawText("-30mm", origin.x - boundary_pixel + 5, origin.y + 15, 0.4, cv::Scalar(0, 0, 0), 1);
     
+    // Y = +30mm 라벨 (화면상으로는 위쪽)
+    drawText("+30mm", origin.x + 5, origin.y - boundary_pixel + 15, 0.4, cv::Scalar(0, 0, 0), 1);
+    // Y = -30mm 라벨 (화면상으로는 아래쪽)
+    drawText("-30mm", origin.x + 5, origin.y + boundary_pixel - 5, 0.4, cv::Scalar(0, 0, 0), 1);
+
     // 현재 위치 좌표 텍스트
-    std::string pos_text = cv::format("(X: %.3f, Y: %.3f)", mean_x, mean_y);
+    std::string pos_text = cv::format("(X: %.3f, Y: %.3f m)", mean_x, mean_y);
     drawText(pos_text, x_offset + 5, y_offset + GRID_SIZE + 20, 0.6, cv::Scalar(255, 0, 0), 1);
 }
+
+// void PoseMonitor::drawGridUI(int x_offset, int y_offset)
+// {
+//     // ----------------------------------------------------
+//     // 그리드 박스 배경 및 테두리
+//     // ----------------------------------------------------
+//     cv::Rect grid_box(x_offset, y_offset, GRID_SIZE, GRID_SIZE);
+//     cv::rectangle(display_, grid_box, cv::Scalar(255, 255, 255), cv::FILLED);
+//     cv::rectangle(display_, grid_box, cv::Scalar(50, 50, 50), 2);
+    
+//     // 타이틀
+//     drawText("[ GLS Position(Mean) Map ]", x_offset, y_offset - 8, 0.65, cv::Scalar(0, 0, 0), 2);
+    
+//     // 원점 (그리드 중앙)
+//     cv::Point origin(x_offset + GRID_SIZE / 2, y_offset + GRID_SIZE / 2);
+    
+//     // ----------------------------------------------------
+//     // 좌표축 및 그리드 선
+//     // ----------------------------------------------------
+//     cv::Scalar axis_color(100, 100, 100);
+//     cv::Scalar grid_color(220, 220, 220);
+//     int center_thickness = 1;
+    
+//     // X축 (빨간색) 및 Y축 (녹색)
+//     cv::line(display_, cv::Point(x_offset, origin.y), cv::Point(x_offset + GRID_SIZE, origin.y), axis_color, center_thickness); // X축 (가로)
+//     cv::line(display_, cv::Point(origin.x, y_offset), cv::Point(origin.x, y_offset + GRID_SIZE), axis_color, center_thickness); // Y축 (세로)
+    
+//     // 보조 그리드 선 (1m 간격)
+//     int grid_step = GRID_SCALE; // 100 픽셀/m
+    
+//     for (int i = -1; i <= 1; ++i) { // -1m, 1m 위치에 보조선
+//         if (i == 0) continue;
+        
+//         // 수직선 (X=1m, X=-1m)
+//         cv::line(display_, cv::Point(origin.x + i * grid_step, y_offset), cv::Point(origin.x + i * grid_step, y_offset + GRID_SIZE), grid_color, 1);
+//         // 수평선 (Y=1m, Y=-1m)
+//         cv::line(display_, cv::Point(x_offset, origin.y + i * grid_step), cv::Point(x_offset + GRID_SIZE, origin.y + i * grid_step), grid_color, 1);
+//     }
+
+//     // ----------------------------------------------------
+//     // GLS 평균 위치 표시
+//     // ----------------------------------------------------
+//     double mean_x = stats2_.mean.x;
+//     double mean_y = stats2_.mean.y;
+    
+//     // 픽셀 좌표로 변환 (Y는 화면 좌표계에서 아래로 증가하므로 부호 반전)
+//     int pos_x = origin.x + (int)(mean_x * GRID_SCALE);
+//     int pos_y = origin.y - (int)(mean_y * GRID_SCALE); 
+    
+//     // 위치를 그리드 박스 안에 클리핑
+//     pos_x = std::max(x_offset, std::min(x_offset + GRID_SIZE, pos_x));
+//     pos_y = std::max(y_offset, std::min(y_offset + GRID_SIZE, pos_y));
+    
+//     // 포인트 그리기 (파란색)
+//     cv::circle(display_, cv::Point(pos_x, pos_y), 5, cv::Scalar(255, 0, 0), cv::FILLED);
+    
+//     // 원점 표시 (녹색)
+//     cv::circle(display_, origin, 3, cv::Scalar(0, 150, 0), cv::FILLED); 
+    
+//     // ----------------------------------------------------
+//     // 좌표 라벨
+//     // ----------------------------------------------------
+//     drawText("X", x_offset + GRID_SIZE, origin.y - 5, 0.4, cv::Scalar(0, 0, 0), 1);
+//     drawText("Y", origin.x + 5, y_offset + 15, 0.4, cv::Scalar(0, 0, 0), 1);
+//     drawText("(0,0)", origin.x + 5, origin.y - 5, 0.4, cv::Scalar(0, 0, 0), 1);
+    
+//     // 현재 위치 좌표 텍스트
+//     std::string pos_text = cv::format("(X: %.3f, Y: %.3f)", mean_x, mean_y);
+//     drawText(pos_text, x_offset + 5, y_offset + GRID_SIZE + 20, 0.6, cv::Scalar(255, 0, 0), 1);
+// }
 
 void PoseMonitor::displayCallback() 
 {
