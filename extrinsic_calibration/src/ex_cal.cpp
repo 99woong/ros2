@@ -3,274 +3,270 @@
 #include <sstream>
 #include <vector>
 #include <cmath>
-#include <numeric>
 #include <iomanip>
+#include <numeric>
 
-// 수학 상수
-constexpr double PI = 3.14159265358979323846;
+// Eigen 라이브러리가 필요합니다.
+#include <Eigen/Dense>
 
-// 측정된 센서 데이터를 담는 구조체
-struct Measurement {
-    double gls_x;         // 바닥 마커 센서 X
-    double gls_y;         // 바닥 마커 센서 Y
-    double gls_heading;   // 바닥 마커 센서 헤딩 (라디안)
-    double vslam_x;       // VSLAM 글로벌 X
-    double vslam_y;       // VSLAM 글로벌 Y
-    double vslam_heading; // VSLAM 글로벌 헤딩 (라디안)
+using namespace std;
+using namespace Eigen;
+
+// 데이터 구조체 정의
+struct PoseData {
+    double vloc_x, vloc_y, vloc_yaw;
+    double gls_x, gls_y, gls_yaw;
+    // -90도 보정된 GLS 데이터를 저장할 필드
+    double gls_x_corr, gls_y_corr, gls_yaw_corr;
 };
 
-// 계산된 외부 보정 파라미터를 담는 구조체
-struct ExtrinsicParams {
-    double delta_x;     // 평행 이동 X 오프셋 (VSLAM 기준)
-    double delta_y;     // 평행 이동 Y 오프셋 (VSLAM 기준)
-    double delta_heading; // 회전 오프셋 (VSLAM - GLS, 라디안)
-};
+// 상수를 라디안으로 변환
+constexpr double DEG_TO_RAD = M_PI / 180.0;
+constexpr double RAD_TO_DEG = 180.0 / M_PI;
 
-// 잔차 및 통계를 담는 구조체
-struct EvaluationResult {
-    double mean_tx_residual;
-    double mean_ty_residual;
-    double mean_r_residual;
-    double rmse_tx;
-    double rmse_ty;
-    double rmse_r;
-    size_t count;
-};
-
-// === 헬퍼 함수: Degree를 Radian으로 변환 ===
-double degrees_to_radians(double degrees) {
-    return degrees * PI / 180.0;
+// 각도 정규화 (-180 ~ 180도)
+double normalizeAngleDeg(double angle) {
+    angle = fmod(angle + 180.0, 360.0);
+    if (angle < 0) {
+        angle += 360.0;
+    }
+    return angle - 180.0;
 }
 
-// === 헬퍼 함수: CSV 파일 읽기 ===
-
-std::vector<Measurement> read_csv(const std::string& filepath) {
-    std::vector<Measurement> data;
-    std::ifstream file(filepath);
+// CSV 파일 읽기 및 GLS 데이터 -90도 보정 적용
+std::vector<PoseData> readAndCorrectCSV(const std::string& filename) {
+    std::vector<PoseData> data;
+    std::ifstream file(filename);
     std::string line;
 
-    if (!file.is_open()) {
-        std::cerr << "오류: CSV 파일을 열 수 없습니다: " << filepath << std::endl;
-        return data;
-    }
-
-    // 첫 번째 줄 (헤더) 건너뛰기
-    std::getline(file, line);
+    // 헤더 스킵
+    if (std::getline(file, line)) { /* skip header */ }
 
     while (std::getline(file, line)) {
         std::stringstream ss(line);
-        std::string segment;
-        Measurement m;
-        std::vector<double> values;
-
-        while (std::getline(ss, segment, ',')) {
+        std::string cell;
+        PoseData d;
+        int col = 0;
+        
+        // 데이터 파싱: vloc_x,vloc_y,vloc_yaw,gls_x,gls_y,gls_yaw
+        while (std::getline(ss, cell, ',')) {
             try {
-                values.push_back(std::stod(segment));
+                if (col == 0) d.vloc_x = std::stod(cell);
+                else if (col == 1) d.vloc_y = std::stod(cell);
+                else if (col == 2) d.vloc_yaw = std::stod(cell);
+                else if (col == 3) d.gls_x = std::stod(cell);
+                else if (col == 4) d.gls_y = std::stod(cell);
+                else if (col == 5) d.gls_yaw = std::stod(cell);
+                
+                col++;
+                // 필요한 6개의 데이터만 읽음
+                if (col >= 6) break; 
             } catch (const std::exception& e) {
-                std::cerr << "경고: 유효하지 않은 숫자 데이터 감지 및 건너뛰기: " << segment << std::endl;
-                continue;
+                // 파싱 오류 발생 시 해당 라인 건너뛰기
+                break;
             }
         }
 
-        if (values.size() >= 6) {
-            m.gls_x = values[7];
-            m.gls_y = values[8];
-            // 헤딩 입력이 Degree이므로, Radian으로 변환하여 저장
-            m.gls_heading = degrees_to_radians(values[9]);
-            m.vslam_x = values[1];
-            m.vslam_y = values[2];
-            // 헤딩 입력이 Degree이므로, Radian으로 변환하여 저장
-            m.vslam_heading = degrees_to_radians(values[3]);
-            data.push_back(m);
+        if (col >= 6) {
+            // --- GLS 데이터 -90도 회전 보정 적용 (GLS 좌표계 X <-> Y 축 변경) ---
+            // 로봇의 X축 (전방) = GLS의 Y축 (전방)
+            // 로봇의 Y축 (좌측) = GLS의 -X축 (우측)
+            // 위치: R(-90) * P = (gls_y, -gls_x)
+            d.gls_x_corr = d.gls_y;
+            d.gls_y_corr = -d.gls_x;
+            
+            // 헤딩: yaw_corr = yaw - 90.0 deg
+            d.gls_yaw_corr = normalizeAngleDeg(d.gls_yaw - 90.0);
+
+            data.push_back(d);
         }
     }
-    std::cout << "성공: 총 " << data.size() << "개의 측정 데이터를 불러왔습니다." << std::endl;
     return data;
 }
 
-// === 헬퍼 함수: 각도 정규화 ([-PI, PI] 범위로) ===
-// 이 함수는 VSLAM의 [0, 2PI] (Degree 기준으로는 [0, 360]) 각도를 GLS와 동일한 [-PI, PI] 범위로 변환하는 데 사용됩니다.
-double normalize_angle(double angle) {
-    angle = std::fmod(angle + PI, 2.0 * PI);
-    if (angle < 0) {
-        angle += 2.0 * PI;
+// 레버 암 추정 및 잔차 계산 함수 (변화량 기반, -90도 보정 데이터 사용)
+void estimateLeverArmAndEvaluate(const std::vector<PoseData>& data) {
+    if (data.size() < 2) {
+        cerr << "Error: Need at least two data points for increment-based estimation." << endl;
+        return;
     }
-    return angle - PI;
-}
 
-// === 1단계: 외부 보정 파라미터 계산 ===
+    const int N = data.size();
+    const int M = N - 1; // 변화량 샘플 개수
 
-ExtrinsicParams calculate_extrinsic_params(const std::vector<Measurement>& data) {
-    ExtrinsicParams params = {0.0, 0.0, 0.0};
-    if (data.empty()) return params;
-
-    // 1. 헤딩 오프셋 (Delta Heading) 계산
-    double sum_sin = 0.0;
-    double sum_cos = 0.0;
-
-    for (const auto& m : data) {
-        // VSLAM 헤딩 (0~2PI)를 GLS와 동일한 [-PI, PI] 범위로 변환합니다.
-        double normalized_vslam_heading = normalize_angle(m.vslam_heading);
+    // --- 1. 헤딩 오프셋 (Lever-Arm Theta) 추정 ---
+    // (보정된 GLS Yaw 변화량과 VSLAM Yaw 변화량의 평균 차이)
+    vector<double> yaw_delta_diff_rad;
+    for (int i = 0; i < M; ++i) {
+        // VSLAM Delta Yaw (CCW)
+        double vloc_delta_yaw = normalizeAngleDeg(data[i+1].vloc_yaw - data[i].vloc_yaw) * DEG_TO_RAD;
         
-        // VSLAM - GLS 의 각도 차이
-        double diff = normalized_vslam_heading - m.gls_heading;
-        sum_sin += std::sin(diff);
-        sum_cos += std::cos(diff);
+        // 보정된 GLS100 Delta Yaw (CW -> CCW 변환을 통해 VSLAM과 동일한 규약으로 만듦)
+        // 주의: GLS의 원본 Yaw는 CW/RHS일 수 있으므로, VSLAM과 동일한 CCW/RHS로 변환하는 과정을 유지함
+        double gls_delta_yaw = normalizeAngleDeg((-data[i+1].gls_yaw_corr) - (-data[i].gls_yaw_corr)) * DEG_TO_RAD;
+
+        yaw_delta_diff_rad.push_back(vloc_delta_yaw - gls_delta_yaw);
+    }
+    
+    double lever_arm_yaw_rad = 0.0;
+    for (double diff : yaw_delta_diff_rad) {
+        lever_arm_yaw_rad += diff;
+    }
+    lever_arm_yaw_rad /= yaw_delta_diff_rad.size();
+    
+    // --- 2. 위치 레버 암 L 추정 (변화량 기반 선형 최소 제곱법) ---
+    // Ax = b, x = [L_x, L_y]^T (미지수 2개)
+    MatrixXd A(2 * M, 2);
+    VectorXd b(2 * M);
+
+    for (int i = 0; i < M; ++i) {
+        const auto& d1 = data[i];   // t_i
+        const auto& d2 = data[i+1]; // t_i+1
+
+        // VSLAM Yaw (라디안)
+        double yaw1 = d1.vloc_yaw * DEG_TO_RAD;
+        double yaw2 = d2.vloc_yaw * DEG_TO_RAD;
+        
+        // 회전 행렬 성분
+        double cosY1 = cos(yaw1); double sinY1 = sin(yaw1);
+        double cosY2 = cos(yaw2); double sinY2 = sin(yaw2);
+
+        // A_i = R(yaw_2) - R(yaw_1)
+        double A11 = cosY2 - cosY1; double A12 = -sinY2 + sinY1;
+        double A21 = sinY2 - sinY1; double A22 = cosY2 - cosY1;
+
+        // A 행렬 (2x2 블록)
+        A(2 * i, 0)     = A11; A(2 * i, 1)     = A12;
+        A(2 * i + 1, 0) = A21; A(2 * i + 1, 1) = A22;
+
+        // b 벡터: delta_P_v - delta_P_g_corr
+        double delta_v_x = d2.vloc_x - d1.vloc_x;
+        double delta_v_y = d2.vloc_y - d1.vloc_y;
+        double delta_g_x_corr = d2.gls_x_corr - d1.gls_x_corr;
+        double delta_g_y_corr = d2.gls_y_corr - d1.gls_y_corr;
+        
+        b(2 * i)     = delta_v_x - delta_g_x_corr;
+        b(2 * i + 1) = delta_v_y - delta_g_y_corr;
     }
 
-    // 각도 차이의 평균을 atan2를 사용하여 안정적으로 계산
-    params.delta_heading = std::atan2(sum_sin / data.size(), sum_cos / data.size());
+    // 최소 제곱 해: x = [L_x, L_y]^T
+    Vector2d x = (A.transpose() * A).ldlt().solve(A.transpose() * b);
 
-    // 2. 평행 이동 오프셋 (Delta X, Delta Y) 계산
+    // 결과 추출
+    double lever_arm_x = x(0);
+    double lever_arm_y = x(1);
+
+    // --- 3. 결과 출력 ---
+    cout << "## 📏 Lever-Arm (Offset) Estimation Results (90-deg Corrected LGS)" << endl;
+    cout << "------------------------------------------------------------------------" << endl;
+    cout << fixed << setprecision(6);
+    
+    // 헤딩 오프셋
+    cout << "**Heading Delta Difference Offset (Theta):**" << endl;
+    cout << "   - **Rad:** " << lever_arm_yaw_rad << " [rad]" << endl;
+    cout << "   - **Deg:** " << lever_arm_yaw_rad * RAD_TO_DEG << " [deg]" << endl;
+    
+    // 레버 암 (L)
+    cout << "**Physical Lever-Arm (L_x, L_y in Robot Frame):**" << endl;
+    cout << "   - **L_x:** " << lever_arm_x << " [m]" << endl;
+    cout << "   - **L_y:** " << lever_arm_y << " [m]" << endl;
+    cout << "------------------------------------------------------------------------" << endl;
+
+
+    // --- 4. 잔차 평가 (Residual Evaluation) ---
+    // Global Origin Offset t_global 추정 및 최종 잔차 계산
+
+    cout << "## 📈 Residual Evaluation (After L & Theta Alignment)" << endl;
+    cout << "-------------------------------------------" << endl;
+    
+    // t_global 추정 (Lever-Arm 적용 후 평균 차이)
     double sum_tx = 0.0;
     double sum_ty = 0.0;
-    
-    double cos_dh = std::cos(params.delta_heading);
-    double sin_dh = std::sin(params.delta_heading);
 
-    for (const auto& m : data) {
-        // Step 2-1: GLS 좌표를 Delta Heading만큼 회전시켜 VSLAM 좌표계 방향으로 정렬 (R * P_gls)
+    for (const auto& d : data) {
+        double vloc_yaw_rad = d.vloc_yaw * DEG_TO_RAD;
         
-        // P_gls를 VSLAM 프레임으로 변환했을 때의 예상 위치 (회전 보상)
-        double gls_rotated_x = m.gls_x * cos_dh - m.gls_y * sin_dh;
-        double gls_rotated_y = m.gls_x * sin_dh + m.gls_y * cos_dh;
+        // R(yaw_v) * L_robot
+        double L_global_x = lever_arm_x * cos(vloc_yaw_rad) - lever_arm_y * sin(vloc_yaw_rad);
+        double L_global_y = lever_arm_x * sin(vloc_yaw_rad) + lever_arm_y * cos(vloc_yaw_rad);
 
-        // Step 2-2: VSLAM 글로벌 위치와 회전 보상된 GLS 위치의 차이(평행 이동)를 누적
-        // t = P_vslam - (R * P_gls)
-        double current_tx = m.vslam_x - gls_rotated_x;
-        double current_ty = m.vslam_y - gls_rotated_y;
-
-        sum_tx += current_tx;
-        sum_ty += current_ty;
+        // t_global_i = P_v - P_g_corr - R(yaw_v) * L
+        sum_tx += d.vloc_x - d.gls_x_corr - L_global_x;
+        sum_ty += d.vloc_y - d.gls_y_corr - L_global_y;
     }
-
-    // 평행 이동 오프셋의 평균 계산
-    params.delta_x = sum_tx / data.size();
-    params.delta_y = sum_ty / data.size();
-
-    return params;
-}
-
-// === 2단계: 보정 파라미터 적용 및 잔차 평가 ===
-
-EvaluationResult evaluate_calibration(const std::vector<Measurement>& data, const ExtrinsicParams& params) {
-    EvaluationResult result = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, data.size()};
-
-    double sq_sum_tx_res = 0.0;
-    double sq_sum_ty_res = 0.0;
-    double sq_sum_r_res = 0.0;
     
-    double sum_tx_res = 0.0;
-    double sum_ty_res = 0.0;
+    // 정렬된 데이터의 평균 글로벌 오프셋 (t_global)
+    double global_offset_tx = sum_tx / N;
+    double global_offset_ty = sum_ty / N;
+    
+    cout << "**Global Origin Offset (t_x, t_y) [G vs M, Derived]:**" << endl;
+    cout << "   - **t_x:** " << global_offset_tx << " [m]" << endl;
+    cout << "   - **t_y:** " << global_offset_ty << " [m]" << endl;
 
-    double cos_dh = std::cos(params.delta_heading);
-    double sin_dh = std::sin(params.delta_heading);
 
-    for (const auto& m : data) {
-        // GLS 포즈에 외부 보정 파라미터 적용하여 VSLAM 추정 포즈 계산
-        
-        // 1. GLS 좌표에 회전 변환 적용
-        double gls_calib_x = m.gls_x * cos_dh - m.gls_y * sin_dh;
-        double gls_calib_y = m.gls_x * sin_dh + m.gls_y * cos_dh;
+    // 최종 잔차 계산
+    double sum_sq_res_x = 0.0; double sum_sq_res_y = 0.0; double sum_sq_res_yaw = 0.0;
 
-        // 2. 평행 이동 변환 적용
-        gls_calib_x += params.delta_x;
-        gls_calib_y += params.delta_y;
+    ofstream residual_file("residual_evaluation_90deg_corrected.csv");
+    residual_file << fixed << setprecision(6);
+    residual_file << "vloc_x,vloc_y,vloc_yaw,gls_x_aligned,gls_y_aligned,gls_yaw_aligned_deg,residual_x,residual_y,residual_yaw_deg" << endl;
 
-        // 3. 헤딩 변환 적용
-        double gls_calib_heading = normalize_angle(m.gls_heading + params.delta_heading);
+    for (const auto& d : data) {
+        double vloc_yaw_rad = d.vloc_yaw * DEG_TO_RAD;
+        
+        // 1. GLS100 위치 정렬: P_g_aligned = P_g_corr + t_global + R(yaw_v) * L_robot
+        double L_global_x = lever_arm_x * cos(vloc_yaw_rad) - lever_arm_y * sin(vloc_yaw_rad);
+        double L_global_y = lever_arm_x * sin(vloc_yaw_rad) + lever_arm_y * cos(vloc_yaw_rad);
+        
+        double gls_x_aligned = d.gls_x_corr + global_offset_tx + L_global_x;
+        double gls_y_aligned = d.gls_y_corr + global_offset_ty + L_global_y;
 
-        // 잔차 계산 (VSLAM 실제 측정값 - 보정된 GLS 측정값)
+        // 2. 헤딩 변환: yaw_g_aligned = -yaw_g_corr_cw + theta
+        double gls_yaw_aligned_rad = -d.gls_yaw_corr * DEG_TO_RAD + lever_arm_yaw_rad;
+        double gls_yaw_aligned_deg = gls_yaw_aligned_rad * RAD_TO_DEG;
+
+        // 3. 잔차 계산 (VSLAM - Aligned GLS)
+        double res_x = d.vloc_x - gls_x_aligned;
+        double res_y = d.vloc_y - gls_y_aligned;
+        double res_yaw_deg = normalizeAngleDeg(d.vloc_yaw - gls_yaw_aligned_deg);
+
+        // 잔차 저장 및 통계 계산
+        residual_file << d.vloc_x << "," << d.vloc_y << "," << d.vloc_yaw << ","
+                      << gls_x_aligned << "," << gls_y_aligned << "," << gls_yaw_aligned_deg << ","
+                      << res_x << "," << res_y << "," << res_yaw_deg << endl;
         
-        // 위치 잔차 (X, Y)
-        double tx_residual = m.vslam_x - gls_calib_x;
-        double ty_residual = m.vslam_y - gls_calib_y;
-        
-        // 회전 잔차 (Heading)
-        // VSLAM 헤딩을 먼저 [-PI, PI]로 변환하여 보정된 GLS 헤딩과 비교합니다.
-        double normalized_vslam_heading = normalize_angle(m.vslam_heading);
-        double r_diff = normalize_angle(normalized_vslam_heading - gls_calib_heading);
-        
-        // 통계 누적
-        sum_tx_res += tx_residual;
-        sum_ty_res += ty_residual;
-        
-        sq_sum_tx_res += tx_residual * tx_residual;
-        sq_sum_ty_res += ty_residual * ty_residual;
-        sq_sum_r_res += r_diff * r_diff;
+        sum_sq_res_x += res_x * res_x; sum_sq_res_y += res_y * res_y; sum_sq_res_yaw += res_yaw_deg * res_yaw_deg;
     }
-
-    // 평균 잔차 (Mean Residual) - 이론적으로 0에 가까워야 함
-    result.mean_tx_residual = sum_tx_res / result.count;
-    result.mean_ty_residual = sum_ty_res / result.count;
-    // 평균 회전 잔차 (회전은 이미 보정 과정에서 평균화했으므로, 제곱 평균으로만 평가)
     
-    // RMSE (Root Mean Square Error)
-    result.rmse_tx = std::sqrt(sq_sum_tx_res / result.count);
-    result.rmse_ty = std::sqrt(sq_sum_ty_res / result.count);
-    result.rmse_r = std::sqrt(sq_sum_r_res / result.count);
+    // 최종 통계
+    double rmse_x = sqrt(sum_sq_res_x / N);
+    double rmse_y = sqrt(sum_sq_res_y / N);
+    double rmse_yaw_deg = sqrt(sum_sq_res_yaw / N);
 
-    return result;
+    cout << "**RMSE (Root Mean Square Error) for Consistency:**" << endl;
+    cout << "   - **X (m):** " << rmse_x << endl;
+    cout << "   - **Y (m):** " << rmse_y << endl;
+    cout << "   - **Yaw (deg):** " << rmse_yaw_deg << endl;
+
+    cout << "-------------------------------------------" << endl;
+    cout << "Residuals saved to 'residual_evaluation_90deg_corrected.csv'" << endl;
+    residual_file.close();
 }
-
-// === 메인 함수 ===
 
 int main() {
-    // 사용자에게 파일 경로 입력 요청
-    std::string filename = "calibration_data.csv";
-    std::cout << "================================================" << std::endl;
-    std::cout << "차량 센서 외부 보정 및 일관성 평가 프로그램" << std::endl;
-    std::cout << "================================================" << std::endl;
-    std::cout << "CSV 파일 경로를 입력하세요 (예: calibration_data.csv): ";
-    // std::cin >> filename;
+    // Eigen 라이브러리가 필요합니다.
+    // 사용자가 업로드한 파일 이름을 사용합니다.
+    std::string filename = "pose_log_20251024_112531_832.csv"; 
     
-    // 테스트를 위해 파일명을 하드코딩합니다. 실제 사용 시 위 주석을 해제하십시오.
-    filename = "calibration_data.csv"; 
+    // GLS 데이터에 -90도 보정을 적용하면서 CSV를 읽습니다.
+    auto data = readAndCorrectCSV(filename);
 
-    // 1. 데이터 로드
-    std::vector<Measurement> data = read_csv(filename);
-
-    if (data.size() < 2) {
-        std::cerr << "오류: 보정을 위한 충분한 데이터(최소 2개)가 없습니다." << std::endl;
+    if (data.empty()) {
+        cerr << "파일에서 데이터를 읽는 데 실패했거나 데이터가 충분하지 않습니다: " << filename << endl;
         return 1;
     }
 
-    // 2. 외부 보정 파라미터 계산
-    ExtrinsicParams params = calculate_extrinsic_params(data);
-
-    // 3. 결과 출력
-    std::cout << "\n================================================" << std::endl;
-    std::cout << "1. 계산된 외부 보정 파라미터 (Extrinsic Parameters)" << std::endl;
-    std::cout << "================================================" << std::endl;
-    std::cout << std::fixed << std::setprecision(5);
-    std::cout << "회전 오프셋 (Delta Heading, 라디안): " << params.delta_heading << std::endl;
-    std::cout << "회전 오프셋 (Delta Heading, 도):     " << params.delta_heading * 180.0 / PI << " deg" << std::endl;
-    std::cout << "평행 이동 오프셋 X (Delta X):        " << params.delta_x << " m" << std::endl;
-    std::cout << "평행 이동 오프셋 Y (Delta Y):        " << params.delta_y << " m" << std::endl;
-
-    // 4. 보정 파라미터 적용 및 잔차 평가
-    EvaluationResult eval_result = evaluate_calibration(data, params);
-
-    std::cout << "\n================================================" << std::endl;
-    std::cout << "2. 잔차 및 일관성 평가 결과 (Residuals & Consistency)" << std::endl;
-    std::cout << "(보정 파라미터를 적용한 후의 VSLAM 대비 오차)" << std::endl;
-    std::cout << "================================================" << std::endl;
-    
-    // RMSE (일관성 평가 지표)
-    std::cout << "[일관성 지표: RMSE (Root Mean Square Error)]" << std::endl;
-    std::cout << "X 축 RMSE: " << eval_result.rmse_tx << " m" << std::endl;
-    std::cout << "Y 축 RMSE: " << eval_result.rmse_ty << " m" << std::endl;
-    std::cout << "헤딩 RMSE: " << eval_result.rmse_r << " rad (" << eval_result.rmse_r * 180.0 / PI << " deg)" << std::endl;
-    std::cout << "\n" << std::endl;
-
-    // 잔차 평균 (Mean Residual) - 보정의 성공 여부 확인용
-    std::cout << "[보정 성공 지표: 평균 잔차 (Mean Residual)]" << std::endl;
-    std::cout << "X 축 평균 잔차 (Mean X Residual): " << eval_result.mean_tx_residual << " m (0에 가까워야 함)" << std::endl;
-    std::cout << "Y 축 평균 잔차 (Mean Y Residual): " << eval_result.mean_ty_residual << " m (0에 가까워야 함)" << std::endl;
-    
-    std::cout << "\n------------------------------------------------" << std::endl;
-    std::cout << "평가 요약: RMSE 값이 작을수록 두 센서 측정치의 일관성이 높음을 의미합니다." << std::endl;
-    std::cout << "------------------------------------------------" << std::endl;
+    estimateLeverArmAndEvaluate(data);
 
     return 0;
 }
