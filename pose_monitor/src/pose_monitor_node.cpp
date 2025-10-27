@@ -61,7 +61,8 @@ private:
     int selected_topic2_idx_;
     
     cv::Mat display_;
-    const int WINDOW_WIDTH = 1200;
+    // const int WINDOW_WIDTH = 1200;
+    const int WINDOW_WIDTH = 1400;
     const int WINDOW_HEIGHT = 900;
     
     rclcpp::TimerBase::SharedPtr timer_;
@@ -395,10 +396,9 @@ void PoseMonitor::saveToCSV()
 
     std::stringstream log_entry;
     log_entry << "#" << log_count_ << " | " << timestamp.str() 
-             << " | S:" << current_status_ 
-             << " | V:(" << std::fixed << std::setprecision(2)
+             << " | vSLAM:(" << std::fixed << std::setprecision(3)
              << stats1_.mean.x << "," << stats1_.mean.y << "," << stats1_.mean.yaw << ")"
-             << " G:(" 
+             << " GLS100:(" 
              << stats2_.mean.x << "," << stats2_.mean.y << "," << stats2_.mean.yaw << ")";
     
     log_history_.push_back(log_entry.str());
@@ -414,15 +414,6 @@ void PoseMonitor::saveToCSV()
 
 void PoseMonitor::checkStability() 
 {
-    // Topic 1 안정성 검사
-    // bool stable1 = (stats1_.stddev.x < STDD_M_THRESHOLD &&
-    //                 stats1_.stddev.y < STDD_M_THRESHOLD &&
-    //                 stats1_.stddev.yaw < STDD_YAW_THRESHOLD);
-
-    // // Topic 2 안정성 검사
-    // bool stable2 = (stats2_.stddev.x < STDD_M_THRESHOLD &&
-    //                 stats2_.stddev.y < STDD_M_THRESHOLD &&
-    //                 stats2_.stddev.yaw < STDD_YAW_THRESHOLD);
     bool stable1 = (stats1_.stddev.x < std_m_threshold_ &&
                     stats1_.stddev.y < std_m_threshold_ &&
                     stats1_.stddev.yaw < std_yaw_threshold_);
@@ -432,8 +423,6 @@ void PoseMonitor::checkStability()
                     stats2_.stddev.y < std_m_threshold_ &&
                     stats2_.stddev.yaw < std_yaw_threshold_);
     
-    // std::cout << "stable1 : " << stable1 << " " << stable2 <<std::endl;
-
     // 두 토픽 모두 안정적일 때만 전체 시스템 안정적
     is_stable_ = stable1 && stable2;
 }
@@ -687,8 +676,8 @@ void PoseMonitor::drawPoseData(const std::string& title, const StatisticsData& s
     drawText(cv::format("Yaw: %.2f deg", stats.current.yaw), x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
     y += line_height + 10;
 
-    std::string rate_text = cv::format("Rate: %.2f Hz", stats.rate_hz);
-    drawText(rate_text, x_offset + 10, y, 0.6, cv::Scalar(150, 0, 0), 1);
+    std::string rate_text = cv::format("Sample Rate : %.2f [Hz]", stats.rate_hz);
+    drawText(rate_text, x_offset + 10, y, 0.6, cv::Scalar(150, 0, 0), 2);
     y += line_height + 10;    
     
     // Mean
@@ -970,18 +959,20 @@ void PoseMonitor::displayCallback()
     
     display_ = cv::Mat(WINDOW_HEIGHT, WINDOW_WIDTH, CV_8UC3, cv::Scalar(240, 240, 240));
     
-    drawText("ROS2 Pose Monitor", 20, 40, 1.2, cv::Scalar(0, 0, 0), 2);
-    
+    drawText("SLAM Consistency Analyzer ", 20, 40, 1.2, cv::Scalar(0, 0, 0), 3);
+
+    grid_x_offset = WINDOW_WIDTH / 2 + 300; 
+    grid_y_offset = 150;    
 
     if(current_status_)
     {
-        drawText(cv::format("GLS100 dection : Success"), 
-                 WINDOW_WIDTH/2 + 30, 70, 0.8, cv::Scalar(0, 128, 0), 2);
+        drawText(cv::format("GLS100 detection : Success"), 
+                 grid_x_offset, 90, 0.8, cv::Scalar(0, 128, 0), 2);
     }
     else
     {
-        drawText(cv::format("GLS100 dection : Fail"), 
-                 WINDOW_WIDTH/2 + 30, 70, 0.8, cv::Scalar(0, 0, 255), 2);
+        drawText(cv::format("GLS100 detection : Fail"), 
+                 grid_x_offset, 90, 0.8, cv::Scalar(0, 0, 255), 2);
     }
 
     drawButton();
@@ -996,10 +987,11 @@ void PoseMonitor::displayCallback()
            
     drawPoseData(topic1_, stats1_, 30, 90, cv::Scalar(200, 0, 0), std_m_threshold_, std_yaw_threshold_);
     
-    drawPoseData(topic2_, stats2_, WINDOW_WIDTH/2 + 30, 140, cv::Scalar(0, 150, 0), std_m_threshold_, std_yaw_threshold_); 
+    // drawPoseData(topic2_, stats2_, WINDOW_WIDTH/2 + 30, 140, cv::Scalar(0, 150, 0), std_m_threshold_, std_yaw_threshold_); 
+    drawPoseData(topic2_, stats2_, WINDOW_WIDTH/2 - 100, 90, cv::Scalar(0, 150, 0), std_m_threshold_, std_yaw_threshold_); 
     
-    grid_x_offset = WINDOW_WIDTH / 2 + 300; 
-    grid_y_offset = 150; 
+    // grid_x_offset = WINDOW_WIDTH / 2 + 300; 
+    // grid_y_offset = 150; 
     drawGridUI(grid_x_offset, grid_y_offset);
 
     int button_y_offset = grid_y_offset + GRID_SIZE + 40; 
@@ -1016,24 +1008,7 @@ void PoseMonitor::displayCallback()
         20, WINDOW_HEIGHT - 20, 0.5, cv::Scalar(100, 100, 100), 1);
     
     cv::imshow("Pose Monitor", display_);
-    
-    // std::cout << "auto save : " << auto_save_enabled_ << " " << was_stable_ << " " << is_stable_ << std::endl;
-    // // ----------------------------------------------------
-    // // 자동 저장 로직 실행
-    // // ----------------------------------------------------
-    // if (auto_save_enabled_) 
-    // {
-    //     if (!was_stable_ && is_stable_) 
-    //     {
-    //         stable_count = 0;
-    //         saveToCSV(); 
-    //         RCLCPP_INFO(this->get_logger(), "AutoSave Triggered: Stable state achieved.");
-    //     }
-    // }
-    
-    // was_stable_ = is_stable_; 
-    // ----------------------------------------------------
-
+        
     bool topic1_changed = 
         std::abs(stats1_.current.x - last_pose1_.x) > MIN_CHANGE_M ||
         std::abs(stats1_.current.y - last_pose1_.y) > MIN_CHANGE_M ||
