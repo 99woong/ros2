@@ -1,0 +1,10 @@
+/home/zenix/ros2_ws/src/vslam_udp_receiver/build/CMakeFiles/uninstall.dir
+/home/zenix/ros2_ws/src/vslam_udp_receiver/build/CMakeFiles/vslam_udp_receiver_uninstall.dir
+/home/zenix/ros2_ws/src/vslam_udp_receiver/build/CMakeFiles/vslam_receiver.dir
+/home/zenix/ros2_ws/src/vslam_udp_receiver/build/CMakeFiles/test.dir
+/home/zenix/ros2_ws/src/vslam_udp_receiver/build/CMakeFiles/edit_cache.dir
+/home/zenix/ros2_ws/src/vslam_udp_receiver/build/CMakeFiles/rebuild_cache.dir
+/home/zenix/ros2_ws/src/vslam_udp_receiver/build/CMakeFiles/list_install_components.dir
+/home/zenix/ros2_ws/src/vslam_udp_receiver/build/CMakeFiles/install.dir
+/home/zenix/ros2_ws/src/vslam_udp_receiver/build/CMakeFiles/install/local.dir
+/home/zenix/ros2_ws/src/vslam_udp_receiver/build/CMakeFiles/install/strip.dir

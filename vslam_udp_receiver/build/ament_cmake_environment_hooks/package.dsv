@@ -1,0 +1,4 @@
+source;share/vslam_udp_receiver/local_setup.bash
+source;share/vslam_udp_receiver/local_setup.dsv
+source;share/vslam_udp_receiver/local_setup.sh
+source;share/vslam_udp_receiver/local_setup.zsh

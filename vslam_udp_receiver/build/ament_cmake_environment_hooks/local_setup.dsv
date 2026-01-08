@@ -1,0 +1,2 @@
+source;share/vslam_udp_receiver/environment/ament_prefix_path.sh
+source;share/vslam_udp_receiver/environment/path.sh
