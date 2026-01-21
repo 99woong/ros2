@@ -221,8 +221,8 @@ int main(int argc, char* argv[])
 {
     rclcpp::init(argc, argv);
 
-    std::string local_ip = "192.168.56.1";
-    int local_port = 7777;
+    std::string local_ip = "192.168.54.100";
+    int local_port = 8086;
 
     // 커맨드 라인 인자 처리
     if (argc >= 2)
