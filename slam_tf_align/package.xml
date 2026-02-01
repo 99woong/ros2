@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>slam_tf_align</name>
+  <version>0.0.1</version>
+  <description>SLAM pose extrinsic alignment (observe/apply separation)</description>
+
+  <maintainer email="you@example.com">your_name</maintainer>
+  <license>Apache-2.0</license>
+
+  <!-- Build system -->
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <!-- Runtime / build dependencies -->
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>message_filters</depend>
+
+  <!-- Eigen -->
+  <depend>eigen</depend>
+
+  <!-- yaml-cpp -->
+  <depend>yaml-cpp</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
