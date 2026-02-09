@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>fms_mqtt_publish</name>
+  <version>0.0.1</version>
+  <description>MQTT/ROS2 bridge example</description>
+  <maintainer email="your@email.com">Your Name</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <build_depend>rclcpp</build_depend>
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>tf2</build_depend>
+  <build_depend>tf2_geometry_msgs</build_depend>
+  <build_depend>nlohmann_json</build_depend>
+  <build_depend>visualization_msgs</build_depend>
+  <build_depend>ament_index_cpp</build_depend>
+
+  <exec_depend>rclcpp</exec_depend>
+  <exec_depend>geometry_msgs</exec_depend>
+  <exec_depend>tf2</exec_depend>
+  <exec_depend>tf2_geometry_msgs</exec_depend>
+  <exec_depend>nlohmann_json</exec_depend>
+  <exec_depend>visualization_msgs</exec_depend>
+  <exec_depend>ament_index_cpp</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
+
+<!-- <?xml version="1.0"?>
+<package format="3">
+  <name>fms_mqtt_publish</name>
+  <version>0.0.1</version>
+  <description>MQTT/ROS2 bridge example</description>
+  <maintainer email="your@email.com">Your Name</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>geometry_msgs</depend>
+  <depend>tf2</depend>
+  <depend>tf2_geometry_msgs</depend>
+  <exec_depend>nlohmann_json3_dev</exec_depend>
+</package> -->
