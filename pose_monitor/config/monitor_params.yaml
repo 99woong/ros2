@@ -4,6 +4,6 @@ pose_monitor_node:
   ros__parameters:
     stability_threshold:
       # 위치 표준 편차 (미터) 임계값
-      std_m: 0.003
+      std_m: 0.05
       # 회전 표준 편차 (도) 임계값
-      std_yaw: 0.05
+      std_yaw: 0.5

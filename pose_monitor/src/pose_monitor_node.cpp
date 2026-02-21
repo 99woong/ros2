@@ -14,27 +14,30 @@
 #include <sstream>
 #include <chrono>
 #include <ctime>
-#include <cstdlib> // for std::exit
+#include <cstdlib> 
 #include <filesystem> 
 namespace fs = std::filesystem; 
 
-struct PoseData {
+struct PoseData 
+{
     double x;
     double y;
     double yaw;
 };
 
-struct StatisticsData {
+struct StatisticsData 
+{
     PoseData current;
     PoseData mean;
     PoseData stddev;
     PoseData max_stddev;
     std::deque<PoseData> history;
 
-    double rate_hz = 0.0;        // 현재 계산된 패킷 레이트 (Hz)    
+    double rate_hz = 0.0;        
 };
 
-class PoseMonitor : public rclcpp::Node {
+class PoseMonitor : public rclcpp::Node 
+{
 private:
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr sub1_;
     rclcpp::Subscription<geometry_msgs::msg::PoseStamped>::SharedPtr sub2_;
@@ -84,7 +87,7 @@ private:
     int stable_count = 0;          
 
     // 안정성 카운터
-    int stable_count_ = 0; // 안정 상태가 지속된 프레임 수
+    int stable_count_ = 0; 
     const int STABILITY_FRAMES_THRESHOLD = 30; // 약 1초 (30fps 기준)
 
     //이전 프레임의 포즈 값 저장 (Topic 1과 Topic 2 각각 필요)
@@ -94,26 +97,19 @@ private:
     //1초 카운트 동안 데이터 변화가 있었는지 추적
     bool data_changed_during_stable_count_ = false; 
 
-    // 변화를 감지할 미세 임계값 (예: 1 마이크로미터 및 1 마이크로도)
+    // 변화를 감지할 미세 임계값 
     const double MIN_CHANGE_M = 1e-6;   
     const double MIN_CHANGE_YAW = 1e-6;
 
     // 추가: 저장 이벤트가 발생했는지 추적하는 플래그
     bool save_fired_ = false;    
     
-    // 안정성 기준 정의
-    // const double STDD_M_THRESHOLD = 0.005;
-    // const double STDD_YAW_THRESHOLD = 0.1;
-
     double std_m_threshold_;
     double std_yaw_threshold_;
 
     int grid_x_offset; 
     int grid_y_offset; 
 
-    // const int GRID_SIZE = 250;     // 그리드 UI의 크기 (픽셀)
-    // const int GRID_SCALE = 100;    // 1m당 픽셀 수 (예: 100 픽셀/m)
-    
     const int GRID_SIZE = 250;       // 그리드 UI의 크기는 유지 (픽셀)
     
     // 30mm를 표시하기 위해 스케일 조정 (0.03m을 100~125픽셀로 표시)
@@ -169,9 +165,6 @@ public:
     static void mouseCallback(int event, int x, int y, int flags, void* userdata);
 };
 
-// ====================================================================
-// PoseMonitor 구현
-// ====================================================================
 
 PoseMonitor::PoseMonitor() : Node("pose_monitor_node"), 
                     sample_size_(10), 
@@ -186,11 +179,10 @@ PoseMonitor::PoseMonitor() : Node("pose_monitor_node"),
     this->declare_parameter<double>("stability_threshold.std_m", 0.005);
     this->declare_parameter<double>("stability_threshold.std_yaw", 0.1);
 
-    // ----------------------------------------------------
-    // 수정: 매개변수 값 읽기
-    // ----------------------------------------------------
     this->get_parameter("stability_threshold.std_m", std_m_threshold_);
     this->get_parameter("stability_threshold.std_yaw", std_yaw_threshold_);
+    std_m_threshold_ = 0.1;
+    std_yaw_threshold_= 1.0;
 
     std::cout << " [std_m_threshold] : " << std_m_threshold_<< std::endl;
     std::cout << " [std_yaw_threshold] : " << std_yaw_threshold_<< std::endl;
@@ -206,7 +198,7 @@ PoseMonitor::PoseMonitor() : Node("pose_monitor_node"),
                                    100 + GRID_SIZE + 80, // y_offset (400) + GRID_SIZE (250) + 여백 (40)
                                    GRID_SIZE, 30);      // 250x30 픽셀 크기
 
-    // 🚀 WINDOW_WIDTH, WINDOW_HEIGHT 순서 변경 (OpenCV Mat 생성 시 행, 열 순서)
+
     display_ = cv::Mat(WINDOW_HEIGHT, WINDOW_WIDTH, CV_8UC3, cv::Scalar(240, 240, 240)); 
     cv::namedWindow("Pose Monitor", cv::WINDOW_AUTOSIZE);
     
@@ -377,12 +369,18 @@ void PoseMonitor::saveToCSV()
              << "." << std::setfill('0') << std::setw(3) << now_ms.count();
     
     csv_file_<< std::fixed << std::setprecision(6)
-             << stats1_.mean.x << ","
-             << stats1_.mean.y << ","
-             << stats1_.mean.yaw << ","
-             << stats2_.mean.x << ","
-             << stats2_.mean.y << ","
-             << stats2_.mean.yaw << ","
+            //  << stats1_.mean.x << ","
+            //  << stats1_.mean.y << ","
+            //  << stats1_.mean.yaw << ","
+            //  << stats2_.mean.x << ","
+            //  << stats2_.mean.y << ","
+            //  << stats2_.mean.yaw << ","
+             << stats1_.current.x << ","
+             << stats1_.current.y << ","
+             << stats1_.current.yaw << ","
+             << stats2_.current.x << ","
+             << stats2_.current.y << ","
+             << stats2_.current.yaw << ","
              << stats1_.stddev.x << ","
              << stats1_.stddev.y << ","
              << stats1_.stddev.yaw << ","
@@ -423,6 +421,8 @@ void PoseMonitor::checkStability()
                     stats2_.stddev.y < std_m_threshold_ &&
                     stats2_.stddev.yaw < std_yaw_threshold_);
     
+    // std::cout << stats1_.stddev.x << " " << stats1_.stddev.y << " " << stats1_.stddev.yaw << " " << stats2_.stddev.x << " " << stats2_.stddev.y << " " << stats2_.stddev.yaw << std::endl;
+
     // 두 토픽 모두 안정적일 때만 전체 시스템 안정적
     is_stable_ = stable1 && stable2;
 }
@@ -451,7 +451,7 @@ void PoseMonitor::mouseCallback(int event, int x, int y, int flags, void* userda
         monitor->mouse_over_button_ = monitor->save_button_rect_.contains(cv::Point(x, y)) ||
                                        monitor->rotate_button_rect_.contains(cv::Point(x, y));
     }
-    // flags는 사용되지 않음
+
     (void)flags; 
 }
 
@@ -525,7 +525,6 @@ void PoseMonitor::rateTimerCallback()
     updateRate(stats2_, msg_count2_.exchange(0)); // 현재 카운트를 읽고 0으로 리셋
 }
 
-// StatisticsData에 레이트 값을 적용하는 함수
 void PoseMonitor::updateRate(StatisticsData& stats, int count)
 {
     // 타이머 주기가 정확히 1초이므로, 카운트 수 = 레이트 (Hz)
@@ -613,7 +612,6 @@ void PoseMonitor::calculateStatistics(StatisticsData& stats)
     stats.stddev.yaw = std::sqrt(var_yaw / n);
 }
 
-// 🚀 drawText 정의: thickness 인자를 제거하면 안 됨.
 void PoseMonitor::drawText(const std::string& text, int x, int y, double scale, 
               cv::Scalar color, int thickness) 
 {
@@ -626,11 +624,14 @@ void PoseMonitor::drawButton()
     cv::Scalar button_color;
     std::string button_text;
     
-    if (auto_save_enabled_) {
+    if (auto_save_enabled_) 
+    {
         button_color = mouse_over_button_ ? 
             cv::Scalar(0, 200, 0) : cv::Scalar(0, 150, 0); 
         button_text = "AutoSave: ON";
-    } else {
+    } 
+    else 
+    {
         button_color = mouse_over_button_ ? 
             cv::Scalar(180, 180, 180) : cv::Scalar(150, 150, 150); 
         button_text = "AutoSave: OFF";
@@ -668,7 +669,7 @@ void PoseMonitor::drawPoseData(const std::string& title, const StatisticsData& s
     // Current Data
     drawText("[ Current Data ]", x_offset, y, 0.7, cv::Scalar(0, 0, 0), 2);
     y += line_height;
-    // 🚀 drawText 인자 수정 (thickness = 1 추가)
+
     drawText(cv::format("X: %.4f m", stats.current.x), x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1); 
     y += line_height;
     drawText(cv::format("Y: %.4f m", stats.current.y), x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
@@ -683,7 +684,6 @@ void PoseMonitor::drawPoseData(const std::string& title, const StatisticsData& s
     // Mean
     drawText("[ Mean ]", x_offset, y, 0.7, cv::Scalar(0, 100, 0), 2);
     y += line_height;
-    // 🚀 drawText 인자 수정 (thickness = 1 추가)
     drawText(cv::format("X: %.4f m", stats.mean.x), x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
     y += line_height;
     drawText(cv::format("Y: %.4f m", stats.mean.y), x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
@@ -691,7 +691,6 @@ void PoseMonitor::drawPoseData(const std::string& title, const StatisticsData& s
     drawText(cv::format("Yaw: %.2f deg", stats.mean.yaw), x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
     y += line_height + 10;
     
-    // Std Dev
     bool data_stable = stats.stddev.x < std_m && stats.stddev.y < std_m && stats.stddev.yaw < std_deg;
 
     if(data_stable)
@@ -717,7 +716,7 @@ void PoseMonitor::drawPoseData(const std::string& title, const StatisticsData& s
     std::string yaw_text = cv::format("Yaw: %.4f deg (Max: %.4f deg)", stats.stddev.yaw, stats.max_stddev.yaw);
     drawText(yaw_text, x_offset + 10, y, 0.6, cv::Scalar(0, 0, 0), 1);
     y += line_height;    
-    // 🚀 drawText 인자 수정 (thickness = 1 추가)
+
     drawText(cv::format("Samples: %d / %d", (int)stats.history.size(), sample_size_), 
             x_offset + 10, y, 0.5, cv::Scalar(100, 100, 100), 1);
 }
@@ -743,14 +742,12 @@ void PoseMonitor::drawTopicList(int x_offset, int y_offset)
             marker = "2>";
         }
         
-        // 🚀 drawText 인자 수정 (thickness = 1 추가)
         drawText(marker + available_topics_[i], x_offset, y, 0.45, color, 1);
         y += 22;
     }
     
     if (available_topics_.size() > 15) 
     {
-        // 🚀 drawText 인자 수정 (thickness = 1 추가)
         drawText(cv::format("... and %d more", (int)available_topics_.size() - 15), 
                 x_offset, y, 0.4, cv::Scalar(100, 100, 100), 1);
     }
@@ -770,7 +767,6 @@ void PoseMonitor::drawLogHistory(int x_offset, int y_offset, int width, int heig
     
     if (log_history_.empty()) 
     {
-        // 🚀 drawText 인자 수정 (thickness = 1 추가)
         drawText("No data saved yet. Click 'AutoSave: OFF' to start logging.", 
                 x_offset + 10, y, 0.45, cv::Scalar(150, 150, 150), 1);
     } 
@@ -778,7 +774,6 @@ void PoseMonitor::drawLogHistory(int x_offset, int y_offset, int width, int heig
     {
         for (const auto& log : log_history_) 
         {
-            // 🚀 drawText 인자 수정 (thickness = 1 추가)
             drawText(log, x_offset + 10, y, 0.4, cv::Scalar(0, 0, 0), 1);
             y += line_spacing;
         }
@@ -826,16 +821,12 @@ void PoseMonitor::drawGridUI(int x_offset, int y_offset)
         cv::line(display_, cv::Point(x_offset, origin.y - pixel_step), cv::Point(x_offset + GRID_SIZE, origin.y - pixel_step), grid_color, 1); 
     }
 
-    // ----------------------------------------------------
-    // GLS 평균 위치 표시 (GRID_SCALE 사용)
-    // ----------------------------------------------------
     double mean_x = stats2_.mean.x;
     double mean_y = stats2_.mean.y;
 
     double rotated_x = mean_x;
     double rotated_y = mean_y;
 
-    // 🚀 추가: 90도 단위 회전 변환 적용
     if (map_rotation_deg_ == 90) {
         rotated_x = -mean_y;
         rotated_y = mean_x;
@@ -894,7 +885,6 @@ void PoseMonitor::displayCallback()
         ("Logging to: " + csv_filename_) : 
         ("Ready: " + csv_filename_ + " (Save/New/Start logging)");
         
-    // 🚀 drawText 인자 수정 (thickness = 1 추가)
     drawText(csv_status, 20, WINDOW_HEIGHT - 40, 0.45,
             csv_file_created_ ? cv::Scalar(0, 100, 0) : cv::Scalar(100, 100, 0), 1);
            
@@ -916,7 +906,6 @@ void PoseMonitor::displayCallback()
     int log_box_height = 200;
     drawLogHistory(log_box_x, log_box_y, log_box_width, log_box_height);        
 
-    // 🚀 drawText 인자 수정 (thickness = 1 추가)
     drawText("Press 's' to Save & Move CSV | 'n' for New File | 'r' to refresh | 'q' to quit", 
         20, WINDOW_HEIGHT - 20, 0.5, cv::Scalar(100, 100, 100), 1);
     
@@ -934,27 +923,18 @@ void PoseMonitor::displayCallback()
 
     bool data_has_flow = topic1_changed && topic2_changed;
 
-
-    // 🚀 1초 카운트 기간 동안 데이터 흐름(변화)이 한 번이라도 있었는지 누적 추적
     if (data_has_flow) {
         data_changed_during_stable_count_ = true;
     }    
 
-    // std::cout << "change : " << topic1_changed << " " << topic2_changed << " " << data_has_flow << std::endl;
-
-    // ----------------------------------------------------
-    // 자동 저장 로직 실행 (1초 지연 및 반복 저장 방지)
-    // ----------------------------------------------------
     if (!is_stable_) 
     {
-        // 🚀 이동/불안정 상태: 카운터 및 저장 플래그 리셋
         stable_count_ = 0;
         save_fired_ = false; // 이동이 감지되면 다음 저장을 허용
         data_changed_during_stable_count_ = false;
     }
     else 
     {
-        // 🚀 안정 상태: save_fired_가 false일 때만 카운트 증가
         if (save_fired_ == false) 
         {
             if (stable_count_ < STABILITY_FRAMES_THRESHOLD) 
@@ -964,27 +944,8 @@ void PoseMonitor::displayCallback()
         }
     }
     
-    // if (auto_save_enabled_) 
-    // {
-    //     // 🚀 임계값에 도달했고, 아직 저장이 되지 않았다면 (save_fired_가 false)
-    //     if (stable_count_ == STABILITY_FRAMES_THRESHOLD && save_fired_ == false) 
-    //     {
-    //         saveToCSV(); 
-    //         RCLCPP_INFO(this->get_logger(), "AutoSave Triggered: Stable state achieved and held for 1 second.");
-            
-    //         // 🚀 저장 완료 플래그 설정: 다음 이동이 있을 때까지 저장 방지
-    //         save_fired_ = true; 
-            
-    //         // stable_count_는 이미 임계값에 도달했으므로 더 이상 증가하지 않음
-    //         // (is_stable_이 계속 true이고 save_fired_가 true이면 stable_count_는 증가하지 않음)
-    //     }
-    // }    
     if (auto_save_enabled_) 
         {
-        // 🚀 저장 조건 확인: 
-        // 1. 임계값에 도달했고 (1초 유지)
-        // 2. 아직 저장이 되지 않았으며
-        // 3. AND (추가 조건) 1초 동안 포즈 값이 변화했을 때 (데이터 정체 방지)
         if (stable_count_ == STABILITY_FRAMES_THRESHOLD && 
             save_fired_ == false &&
             data_changed_during_stable_count_ == true) 
@@ -1026,15 +987,17 @@ void PoseMonitor::displayCallback()
     { 
         prepareNewCSV();
     }
+    else if (key == 'p') 
+    { 
+        saveToCSV();
+    }
     else if (key == 'c') 
     {
-        // Topic 1 (VLOC) 통계 리셋
         stats1_.history.clear();
         stats1_.mean = {0.0, 0.0, 0.0};
         stats1_.stddev = {0.0, 0.0, 0.0};
         stats1_.max_stddev = {0.0, 0.0, 0.0}; // 최대 표준 편차도 리셋
 
-        // Topic 2 (GLS) 통계 리셋
         stats2_.history.clear();
         stats2_.mean = {0.0, 0.0, 0.0};
         stats2_.stddev = {0.0, 0.0, 0.0};
@@ -1048,10 +1011,6 @@ void PoseMonitor::displayCallback()
         RCLCPP_INFO(this->get_logger(), "Statistics Reset: 'c' key pressed. History and Max StdDev cleared.");
     }
 }
-
-// ====================================================================
-// main 함수
-// ====================================================================
 
 int main(int argc, char** argv) 
 {
