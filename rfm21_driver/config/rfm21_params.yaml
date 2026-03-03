@@ -1,0 +1,27 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  RFM 2.1 driver parameters
+#  Copy to your workspace and pass with:
+#    ros2 launch rfm21_driver rfm21_driver.launch.py
+#  or override individual params:
+#    ros2 run rfm21_driver rfm21_can_node --ros-args -p node_id:=16
+# ─────────────────────────────────────────────────────────────────────────────
+
+rfm21_can_node:
+  ros__parameters:
+
+    # ── CAN interface ─────────────────────────────────────────────────────────
+    can_device: "PCAN_USBBUS1"     # PCAN_USBBUS1 … PCAN_USBBUS8
+    can_baudrate: 250000           # RFM default = 250 kbit/s (up to 1 Mbit/s)
+
+    # ── RFM device ────────────────────────────────────────────────────────────
+    node_id: 15                    # 15 (0x0F) = front antenna (open pin)
+                                   # 16 (0x10) = rear  antenna (closed pin)
+
+    # ── Operation mode ────────────────────────────────────────────────────────
+    # false (default) = RFM starts cycle (Sync-Input / SyncBox mode)
+    # true            = Navigation System starts cycle (Trigger mode)
+    trigger_mode: false
+
+    # ── ROS ───────────────────────────────────────────────────────────────────
+    read_frequency_ms: 10          # CAN poll interval (ms).  RFM cycle ~40 ms.
+    frame_id: "rfm21"              # TF frame for PoseStamped messages
