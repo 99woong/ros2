@@ -1,0 +1,7 @@
+/**:
+  ros__parameters:
+    read_frequency_ms: 10   
+    can_device: "PCAN_USBBUS1"
+    can_baudrate: 500000 # Supported: 125000, 250000, 500000, 1000000
+    node_id: 10         # GLS100의 CANopen Node ID
+    frame_id: "gls100"  
