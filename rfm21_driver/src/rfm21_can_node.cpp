@@ -34,7 +34,7 @@ public:
         }
 
         // Tell the RFM to start measuring (NMT Start-Node).
-        device_processor_->send_startup(*this);
+        // device_processor_->send_startup(*this);
 
         int freq_ms = this->get_parameter("read_frequency_ms").as_int();
         timer_ = this->create_wall_timer(

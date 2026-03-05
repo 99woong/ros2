@@ -172,11 +172,15 @@ void RFM21Device::handle_result_msg1_sync(const TPCANMsg& msg)
 
     result1_updated_ = true;
 
-    RCLCPP_DEBUG(logger_,
-        "[RESULT1] status=0x%04X  RelX=%d mm  RelY=%d mm  "
-        "start_id=%u  time_offset=%.1f ms",
-        status_, rel_x_mm_, rel_y_mm_,
-        last_start_id_, time_offset_ * 0.1);
+    // Always log raw bytes so we can verify RelX/RelY parsing
+    RCLCPP_INFO(logger_,
+        "[RESULT1] raw=[%02X %02X | %02X %02X | %02X %02X | %02X %02X]  "
+        "status=0x%04X  RelX=%d mm  RelY=%d mm  start_id=%u",
+        msg.DATA[0], msg.DATA[1],
+        msg.DATA[2], msg.DATA[3],
+        msg.DATA[4], msg.DATA[5],
+        msg.DATA[6], msg.DATA[7],
+        status_, rel_x_mm_, rel_y_mm_, last_start_id_);
 }
 
 // ─── handle_result_msg2  (sync mode, 0x380 LEN=8) ────────────────────────────
@@ -279,27 +283,43 @@ void RFM21Device::publish_measurement(rclcpp::Node& node)
         }
     }
 
-    // ── PoseStamped (absolute position + relative offset as orientation) ──────
-    //   position.x/y/z = absolute X/Y in metres, 0
-    //   orientation encodes relative offset (RelX→x, RelY→y) via linear scale
-    //   (no real quaternion meaning – purely for visualisation/inspection)
-    if (has_transponder_code_) {
-        geometry_msgs::msg::PoseStamped pmsg;
-        pmsg.header.stamp    = now;
-        pmsg.header.frame_id = frame_id_;
+    // ── PoseStamped ───────────────────────────────────────────────────────────
+    //   Publishes whenever transponder is in range (result_msg1 received).
+    //
+    //   WITH tag code (Result msg2, has_transponder_code_=true):
+    //     position.x/y = absolute X/Y [m],  position.z = 1.0 (absolute flag)
+    //
+    //   WITHOUT tag code (tag not programmed, Result msg1 only):
+    //     position.x/y = relative offset from antenna centre [m],  z = 0.0
+    //
+    //   orientation = identity (RFM 2.1 provides no heading)
+    {
+        bool transponder_present = (status_ & RfmStatus::TRANSPONDER_PRESENT) != 0;
+        bool pos_calculated      = (status_ & RfmStatus::POSITION_CALCULATED) != 0;
 
-        pmsg.pose.position.x = abs_x_mm_ * 0.001;   // mm → m
-        pmsg.pose.position.y = abs_y_mm_ * 0.001;
-        pmsg.pose.position.z = 0.0;
+        if (transponder_present && pos_calculated) {
+            geometry_msgs::msg::PoseStamped pmsg;
+            pmsg.header.stamp    = now;
+            pmsg.header.frame_id = frame_id_;
 
-        // Represent the relative deviation as a yaw angle (rough visualisation)
-        double rel_angle = std::atan2(rel_y_mm_, rel_x_mm_);
-        pmsg.pose.orientation.x = 0.0;
-        pmsg.pose.orientation.y = 0.0;
-        pmsg.pose.orientation.z = std::sin(rel_angle / 2.0);
-        pmsg.pose.orientation.w = std::cos(rel_angle / 2.0);
+            if (has_transponder_code_) {
+                pmsg.pose.position.x = abs_x_mm_ * 0.001;
+                pmsg.pose.position.y = abs_y_mm_ * 0.001;
+                pmsg.pose.position.z = 1.0;   // absolute data available
+            } else {
+                // Tag not programmed – publish relative offset from msg1
+                pmsg.pose.position.x = rel_x_mm_ * 0.001;
+                pmsg.pose.position.y = rel_y_mm_ * 0.001;
+                pmsg.pose.position.z = 0.0;   // relative data only
+            }
 
-        pose_pub_->publish(pmsg);
+            pmsg.pose.orientation.x = 0.0;
+            pmsg.pose.orientation.y = 0.0;
+            pmsg.pose.orientation.z = 0.0;
+            pmsg.pose.orientation.w = 1.0;
+
+            pose_pub_->publish(pmsg);
+        }
     }
 }
 
