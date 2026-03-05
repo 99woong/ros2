@@ -15,7 +15,7 @@ def generate_launch_description():
                               description='RFM CAN node ID (15=front/open, 16=rear/closed)'),
         DeclareLaunchArgument('trigger_mode',     default_value='false',
                               description='false=sync-input(RFM starts), true=trigger(NS starts)'),
-        DeclareLaunchArgument('read_frequency_ms',default_value='10',
+        DeclareLaunchArgument('read_frequency_ms',default_value='100',
                               description='CAN poll interval in milliseconds'),
         DeclareLaunchArgument('frame_id',         default_value='rfm21',
                               description='TF frame ID for published poses'),

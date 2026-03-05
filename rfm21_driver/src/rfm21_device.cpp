@@ -76,6 +76,7 @@ void RFM21Device::send_trigger()
 {
     if (!can_driver_) return;
 
+    std::cout << " send_trigger" << std::endl;
     TPCANMsg msg{};
     msg.ID      = 0x200 + static_cast<uint32_t>(node_id_);
     msg.MSGTYPE = PCAN_MESSAGE_STANDARD;

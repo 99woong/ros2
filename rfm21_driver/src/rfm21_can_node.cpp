@@ -34,12 +34,16 @@ public:
         }
 
         // Tell the RFM to start measuring (NMT Start-Node).
-        // device_processor_->send_startup(*this);
+        device_processor_->send_startup(*this);
 
         int freq_ms = this->get_parameter("read_frequency_ms").as_int();
         timer_ = this->create_wall_timer(
             std::chrono::milliseconds(freq_ms),
             std::bind(&GenericCanNode::readCANMessages, this));
+
+        // trigger_timer_ = this->create_wall_timer(
+        //     std::chrono::milliseconds(1000),
+        //     std::bind(&GenericCanNode::sendTrigger, this));    
 
         RCLCPP_INFO(this->get_logger(),
             "RFM 2.1 CAN node running. Poll interval = %d ms.", freq_ms);
@@ -54,12 +58,19 @@ private:
             device_processor_->process_can_message(msg);
         }
         // Publish whatever was updated this cycle
-        device_processor_->publish_data(*this);
+        // device_processor_->publish_data(*this);
     }
+
+    void sendTrigger()
+    {
+        device_processor_->send_trigger();
+    }
+
 
     CanDriverInterface::Ptr can_driver_;
     DeviceInterface::Ptr    device_processor_;
     rclcpp::TimerBase::SharedPtr timer_;
+    rclcpp::TimerBase::SharedPtr trigger_timer_;
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
