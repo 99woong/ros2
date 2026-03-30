@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>os1_sim_bridge</name>
+  <version>1.0.0</version>
+  <description>
+    Isaac Sim OS1-32 point cloud bridge.
+    Converts Isaac Sim /point_cloud (x,y,z only, variable points)
+    to Ouster OS1-32 native format (32x1024 fixed, 48 bytes/point, ~1.57MB).
+  </description>
+  <maintainer email="user@example.com">user</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
