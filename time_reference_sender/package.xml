@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>time_reference_sender</name>
+  <version>0.0.1</version>
+  <description>Low-latency time_reference_sender for PPS synchronized IMU</description>
+
+  <maintainer email="you@example.com">your_name</maintainer>
+  <license>Apache-2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>nmea_msgs</depend>
+  <depend>sensor_msgs</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
