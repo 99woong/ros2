@@ -91,13 +91,27 @@ struct EIGEN_ALIGN16 Point
   float intensity;
   uint32_t t;
   uint16_t reflectivity;
-  // uint8_t ring;
   uint16_t ring;
   uint16_t ambient;
   uint32_t range;
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
 };
 }  // namespace ouster_ros
+// namespace ouster_ros
+// {
+// struct EIGEN_ALIGN16 Point
+// {
+//   PCL_ADD_POINT4D;
+//   float intensity;
+//   uint32_t t;
+//   uint16_t reflectivity;
+//   // uint8_t ring;
+//   uint16_t ring;
+//   uint16_t ambient;
+//   uint32_t range;
+//   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+// };
+// }  // namespace ouster_ros
 
 // clang-format off
 POINT_CLOUD_REGISTER_POINT_STRUCT(ouster_ros::Point,

@@ -10,32 +10,69 @@ endif()
  set(CMAKE_CXX_FLAGS "-std=c++17 -O3") 
   
  add_definitions(-DROOT_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}/\") 
-  
- set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fexceptions") 
- set(CMAKE_CXX_STANDARD 17) 
+ 
+
+
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fexceptions") 
+# set(CMAKE_CXX_STANDARD 17) 
+# set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# set(CMAKE_CXX_EXTENSIONS OFF)
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -std=c++0x -std=c++14 -fexceptions")
+# set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -pthread -std=c++0x -std=c++14 -fexceptions")
+
+# 기본 플래그 (중복된 -std=c++14 등 제거)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3 -pthread -fexceptions")
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 message("Current CPU archtecture: ${CMAKE_SYSTEM_PROCESSOR}")
 
+# if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
+#   include(ProcessorCount)
+#   ProcessorCount(N)
+#   message("Processer number:  ${N}")
+
+#   if(N GREATER 4)
+#     add_definitions(-DMP_EN)
+#     add_definitions(-DMP_PROC_NUM=3)
+#     message("core for MP: 3")
+#   elseif(N GREATER 3)
+#     add_definitions(-DMP_EN)
+#     add_definitions(-DMP_PROC_NUM=2)
+#     message("core for MP: 2")
+#   else()
+#     add_definitions(-DMP_PROC_NUM=1)
+#   endif()
+# else()
+#   add_definitions(-DMP_PROC_NUM=1)
+# endif()
+
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "(x86)|(X86)|(amd64)|(AMD64)")
+  # x86 최적화
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+  
   include(ProcessorCount)
   ProcessorCount(N)
-  message("Processer number:  ${N}")
-
   if(N GREATER 4)
-    add_definitions(-DMP_EN)
-    add_definitions(-DMP_PROC_NUM=3)
-    message("core for MP: 3")
+    add_definitions(-DMP_EN -DMP_PROC_NUM=3)
   elseif(N GREATER 3)
-    add_definitions(-DMP_EN)
-    add_definitions(-DMP_PROC_NUM=2)
-    message("core for MP: 2")
+    add_definitions(-DMP_EN -DMP_PROC_NUM=2)
   else()
     add_definitions(-DMP_PROC_NUM=1)
   endif()
+
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+  # [중요] Jetson Orin (ARMv8) 최적화
+  # NEON 기술 및 SIMD 활성화를 위해 march 설정 추가
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=armv8-a+simd -mcpu=native")
+  
+  # Jetson AGX Orin은 코어가 많으므로 멀티프로세싱 활성화 (8~12코어 기준)
+  add_definitions(-DMP_EN)
+  add_definitions(-DMP_PROC_NUM=4) 
+  message(STATUS "Jetson ARM optimization enabled (MP_PROC_NUM=4)")
 else()
   add_definitions(-DMP_PROC_NUM=1)
 endif()

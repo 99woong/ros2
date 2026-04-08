@@ -373,6 +373,19 @@ void imu_cbk(const sensor_msgs::msg::Imu::UniquePtr msg_in)
 
     last_timestamp_imu = timestamp;
 
+    // // ===========================
+    // // 좌표계 변환 (FRD → FLU)
+    // // ===========================
+    msg->linear_acceleration.y *= -1.0;
+    // msg->linear_acceleration.z *= -1.0;
+
+    // msg->angular_velocity.y *= -1.0;
+    // msg->angular_velocity.z *= -1.0;
+
+    // // orientation도 동일하게 반전
+    // msg->orientation.y *= -1.0;
+    // msg->orientation.z *= -1.0;    
+
     imu_buffer.push_back(msg);
     mtx_buffer.unlock();
     sig_buffer.notify_all();
@@ -584,6 +597,8 @@ void publish_map(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub
     int size = laserCloudFullRes->points.size();
     PointCloudXYZI::Ptr laserCloudWorld( \
                     new PointCloudXYZI(size, 1));
+
+    std::cout << "publish_map" << std::endl;
 
     for (int i = 0; i < size; i++)
     {
