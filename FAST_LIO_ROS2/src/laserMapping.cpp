@@ -373,19 +373,6 @@ void imu_cbk(const sensor_msgs::msg::Imu::UniquePtr msg_in)
 
     last_timestamp_imu = timestamp;
 
-    // // ===========================
-    // // 좌표계 변환 (FRD → FLU)
-    // // ===========================
-    msg->linear_acceleration.y *= -1.0;
-    // msg->linear_acceleration.z *= -1.0;
-
-    // msg->angular_velocity.y *= -1.0;
-    // msg->angular_velocity.z *= -1.0;
-
-    // // orientation도 동일하게 반전
-    // msg->orientation.y *= -1.0;
-    // msg->orientation.z *= -1.0;    
-
     imu_buffer.push_back(msg);
     mtx_buffer.unlock();
     sig_buffer.notify_all();
@@ -941,7 +928,11 @@ public:
         {
             sub_pcl_pc_ = this->create_subscription<sensor_msgs::msg::PointCloud2>(lid_topic, rclcpp::SensorDataQoS(), standard_pcl_cbk);
         }
-        sub_imu_ = this->create_subscription<sensor_msgs::msg::Imu>(imu_topic, 10, imu_cbk);
+        auto qos_profile = rclcpp::QoS(rclcpp::KeepLast(10));
+        qos_profile.best_effort(); // 이 부분이 핵심입니다!
+        
+        // sub_imu_ = this->create_subscription<sensor_msgs::msg::Imu>(imu_topic, 10, imu_cbk);
+        sub_imu_ = this->create_subscription<sensor_msgs::msg::Imu>(imu_topic, qos_profile, imu_cbk);
         pubLaserCloudFull_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/cloud_registered", 20);
         pubLaserCloudFull_body_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/cloud_registered_body", 20);
         pubLaserCloudEffect_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/cloud_effected", 20);
