@@ -792,7 +792,29 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
         /*** Measuremnt: distance to the closest surface/corner ***/
         ekfom_data.h(i) = -norm_p.intensity;
     }
+
+    if (extrinsic_est_en) 
+    {
+        static int count = 0;
+        if (count++ % 10 == 0) 
+        { // 스캔 10번당 1번 출력 (약 1초 주기)
+            V3D t_est = s.offset_T_L_I;
+            M3D r_est = s.offset_R_L_I.toRotationMatrix();
+
+            printf("\033[1;32m--- Copy these values to your YAML config ---\033[0m\n");
+            printf("extrinsic_T: [%.6f, %.6f, %.6f]\n", t_est[0], t_est[1], t_est[2]);
+            printf("extrinsic_R: [%.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f]\n", 
+                    r_est(0,0), r_est(0,1), r_est(0,2), 
+                    r_est(1,0), r_est(1,1), r_est(1,2), 
+                    r_est(2,0), r_est(2,1), r_est(2,2));
+            printf("\033[1;32m-------------------------------------------\033[0m\n");
+        }
+    }
+
+
     solve_time += omp_get_wtime() - solve_start_;
+
+
 }
 
 class LaserMappingNode : public rclcpp::Node
