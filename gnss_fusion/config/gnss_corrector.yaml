@@ -1,0 +1,76 @@
+gnss_corrector_node:
+  ros__parameters:
+    # ---- TF frame names ----
+    frame_map:  map
+    frame_odom: odom
+    frame_body: body
+
+    # ---- Topic names ----
+    topic_lio:     /Odometry
+    topic_fix:     /fix
+    topic_heading: /heading
+
+    # ---- Fixed harbour datum (ENU origin, absolute reference point) ----
+    # 항만 기준점 좌표: 모든 세션에서 동일한 절대 좌표계 공유
+    # 실제 배포 전 항만 측량 기준점으로 교체할 것
+    datum_lat: 37.486919847
+    datum_lon: 127.121341146
+
+    # ---- GNSS initialisation stability thresholds ----
+    # 부팅 후 정지 상태에서 이 기준을 만족해야 EKF가 시작됨
+    # gnss_init_samples: RTK FIX 샘플 수 (GPS 1Hz → 10초 정지)
+    # gnss_init_pos_std: 위치 표준편차 한계 [m] (이하여야 안정)
+    # gnss_init_yaw_std: 헤딩 표준편차 한계 [rad] (0.02rad ≈ 1.1deg)
+    gnss_init_samples:  10
+    gnss_init_pos_std:  0.3
+    gnss_init_yaw_std:  0.02
+
+    # ---- Heading frame offset ----
+    # GPS 헤딩은 CW-from-North (나침반/NED) 규약이므로 코드에서 부호를 반전한 뒤 이 값을 더함.
+    # yaw_enu = -yaw_raw + yaw_offset  (ENU CCW-from-East 변환)
+    # 값 = π + 안테나 장착 오프셋 (rad); 로봇 구성 변경 시 재보정
+    # 기준: 정지 상태에서 yaw_enu ≈ yaw_odom + drift_(2) 이 되도록 조정
+    yaw_offset: 3.20
+
+    # ---- EKF process noise (how fast LIO drifts) ----
+    pos_process_noise: 0.001
+    yaw_process_noise: 0.0001
+
+    # ---- GPS measurement noise (R) by RTK quality ----
+    pos_r_fix:    0.05
+    pos_r_float:  0.5
+    pos_r_single: 10.0
+
+    # ---- Heading measurement noise ----
+    yaw_r: 0.01
+
+    # ---- Safety: max drift correction per GPS update ----
+    max_pos_correction: 2.0   # metres
+    max_yaw_correction: 0.3   # radians
+
+    # ---- Heading innovation gate ----
+    # GNSS 초기화 후에는 innovation이 작아야 정상
+    # 0.3 rad을 지속적으로 초과하면 yaw_offset 재보정 필요
+    max_heading_innovation: 0.3   # radians
+
+    # ---- Use NavSatFix.position_covariance when available ----
+    use_rtk_covariance: false
+
+    # ---- LIO restart detection threshold ----
+    restart_gap_s: 3.0
+
+    use_sim_time: true
+
+    # ---- GPS antenna lever arm in body frame (x=forward, y=left) [m] ----
+    # launch의 tf_base_to_gps와 동일한 값을 입력
+    # 예: arguments=['-0.015', '0.283', ...] → antenna_offset_x: -0.015, antenna_offset_y: 0.283
+    antenna_offset_x: -0.015
+    antenna_offset_y:  0.283
+
+    # ---- GPS noise simulation ----
+    enable_noise_sim: false
+    multipath_prob:       0.05
+    multipath_magnitude:  8.0
+    multipath_duration_s: 4.0
+    shadow_prob:          0.03
+    shadow_duration_s:    10.0

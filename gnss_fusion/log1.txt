@@ -1,0 +1,379 @@
+$ ros2 launch gnss_fusion fusion.launch.py
+[INFO] [launch]: All log files can be found below /home/zenix/.ros/log/2026-05-07-14-23-35-166797-zenix-B760M-DS3H-GEN5-727760
+[INFO] [launch]: Default logging verbosity is set to INFO
+[INFO] [launch.user]: === GNSS Fusion Launch Start ===
+[INFO] [launch.user]: === All nodes launched ===
+[INFO] [static_transform_publisher-1]: process started with pid [727761]
+[INFO] [static_transform_publisher-2]: process started with pid [727763]
+[INFO] [static_transform_publisher-3]: process started with pid [727765]
+[INFO] [gnss_corrector_node-4]: process started with pid [727767]
+[static_transform_publisher-1] [WARN] [1778131415.194198104] []: Old-style arguments are deprecated; see --help for new-style arguments
+[static_transform_publisher-3] [WARN] [1778131415.195150414] []: Old-style arguments are deprecated; see --help for new-style arguments
+[static_transform_publisher-2] [WARN] [1778131415.195428368] []: Old-style arguments are deprecated; see --help for new-style arguments
+[static_transform_publisher-1] [INFO] [1778131415.196763838] [tf_base_to_gps]: Spinning until stopped - publishing transform
+[static_transform_publisher-1] translation: ('-0.015000', '0.283000', '0.000000')
+[static_transform_publisher-1] rotation: ('0.000000', '0.000000', '0.000000', '1.000000')
+[static_transform_publisher-1] from 'base_link' to 'gps'
+[static_transform_publisher-3] [INFO] [1778131415.198454874] [tf_odom_to_camerainit]: Spinning until stopped - publishing transform
+[static_transform_publisher-3] translation: ('0.000000', '0.000000', '0.000000')
+[static_transform_publisher-3] rotation: ('0.000000', '0.000000', '0.000000', '1.000000')
+[static_transform_publisher-3] from 'odom' to 'camera_init'
+[static_transform_publisher-2] [INFO] [1778131415.199438832] [tf_body_to_base]: Spinning until stopped - publishing transform
+[static_transform_publisher-2] translation: ('0.000000', '0.000000', '0.000000')
+[static_transform_publisher-2] rotation: ('0.000000', '0.000000', '0.000000', '1.000000')
+[static_transform_publisher-2] from 'body' to 'base_link'
+[gnss_corrector_node-4] [INFO] [1778131415.200352471] [gnss_corrector_node]: GnssCorrectorNode started. datum=(37.486919847, 127.121341146) yaw_offset=0.9100 noise_sim=off
+[gnss_corrector_node-4] [INFO] [1778131415.200387294] [gnss_corrector_node]: Waiting for LIO... (init: 10 samples, pos_std<0.30m, yaw_std<0.020rad)
+[gnss_corrector_node-4] [INFO] [1778131423.566364277] [gnss_corrector_node]: LIO received. Waiting for stable GNSS to initialise drift...
+[gnss_corrector_node-4] [INFO] [1778131423.644774401] [gnss_corrector_node]: Init collecting: pos=1/10  yaw=0/10 samples (RTK FIX required for pos)
+[gnss_corrector_node-4] [INFO] [1778131425.142637178] [gnss_corrector_node]: Init collecting: pos=4/10  yaw=3/10 samples (RTK FIX required for pos)
+[gnss_corrector_node-4] [INFO] [1778131426.643045804] [gnss_corrector_node]: Init collecting: pos=7/10  yaw=6/10 samples (RTK FIX required for pos)
+[gnss_corrector_node-4] [INFO] [1778131428.142777737] [gnss_corrector_node]: Init collecting: pos=10/10  yaw=9/10 samples (RTK FIX required for pos)
+[gnss_corrector_node-4] [INFO] [1778131428.143979576] [gnss_corrector_node]: === GNSS init complete ===
+[gnss_corrector_node-4]   map origin : lat=37.486919847  lon=127.121341146
+[gnss_corrector_node-4]   init pos   : e=-0.001 m  n=0.003 m  (std: e=0.001  n=0.002)
+[gnss_corrector_node-4]   init yaw   : 2.0568 rad  (std: 0.0047)
+[gnss_corrector_node-4]   drift_     : [0.002, 0.002, 2.0568]
+[gnss_corrector_node-4] [INFO] [1778131428.642574864] [gnss_corrector_node]: GPS[FIX] e=-0.01 n=0.00 | drift=[0.000, 0.002, 2.0568]
+[gnss_corrector_node-4] [INFO] [1778131429.642106777] [gnss_corrector_node]: GPS[FIX] e=-0.01 n=0.01 | drift=[-0.000, 0.002, 2.0566]
+[gnss_corrector_node-4] [INFO] [1778131430.641481831] [gnss_corrector_node]: GPS[FIX] e=-0.00 n=0.00 | drift=[0.000, 0.002, 2.0623]
+[gnss_corrector_node-4] [INFO] [1778131431.641518323] [gnss_corrector_node]: GPS[FIX] e=-0.02 n=0.00 | drift=[-0.002, 0.002, 2.0612]
+[gnss_corrector_node-4] [INFO] [1778131432.641979648] [gnss_corrector_node]: GPS[FIX] e=-0.00 n=0.01 | drift=[0.001, 0.002, 2.0529]
+[gnss_corrector_node-4] [WARN] [1778131433.142338754] [gnss_corrector_node]: Heading spike rejected: innovation=-0.414 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131433.640399608] [gnss_corrector_node]: GPS[FIX] e=0.06 n=0.07 | drift=[0.004, -0.001, 2.0524]
+[gnss_corrector_node-4] [WARN] [1778131433.642018354] [gnss_corrector_node]: Heading spike rejected: innovation=0.301 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131434.143326547] [gnss_corrector_node]: Heading spike rejected: innovation=-1.064 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131434.640612991] [gnss_corrector_node]: GPS[FIX] e=-0.33 n=-0.36 | drift=[0.039, -0.040, 2.0524]
+[gnss_corrector_node-4] [WARN] [1778131435.142813549] [gnss_corrector_node]: Heading spike rejected: innovation=-2.711 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131435.640494547] [gnss_corrector_node]: GPS[FIX] e=-1.01 n=-0.69 | drift=[0.105, -0.071, 2.0524]
+[gnss_corrector_node-4] [WARN] [1778131435.642028773] [gnss_corrector_node]: Heading spike rejected: innovation=-2.837 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131436.141763799] [gnss_corrector_node]: Heading spike rejected: innovation=-2.898 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131436.639942469] [gnss_corrector_node]: GPS[FIX] e=-2.17 n=-1.14 | drift=[0.157, -0.088, 2.0524]
+[gnss_corrector_node-4] [WARN] [1778131437.141145197] [gnss_corrector_node]: Heading spike rejected: innovation=-3.065 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131437.640756801] [gnss_corrector_node]: GPS[FIX] e=-3.48 n=-1.69 | drift=[0.190, -0.094, 2.0524]
+[gnss_corrector_node-4] [WARN] [1778131437.642407263] [gnss_corrector_node]: Heading spike rejected: innovation=-2.861 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131438.141458557] [gnss_corrector_node]: Heading spike rejected: innovation=-2.276 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131438.639458923] [gnss_corrector_node]: GPS[FIX] e=-4.88 n=-1.60 | drift=[0.177, -0.090, 2.0524]
+[gnss_corrector_node-4] [WARN] [1778131439.142388757] [gnss_corrector_node]: Heading spike rejected: innovation=-0.595 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131439.639660182] [gnss_corrector_node]: GPS[FIX] e=-5.80 n=-0.48 | drift=[0.130, -0.051, 2.0524]
+[gnss_corrector_node-4] [INFO] [1778131440.639822419] [gnss_corrector_node]: GPS[FIX] e=-6.31 n=0.83 | drift=[0.092, -0.069, 2.0118]
+[gnss_corrector_node-4] [WARN] [1778131441.140488254] [gnss_corrector_node]: Heading spike rejected: innovation=0.532 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131441.638717547] [gnss_corrector_node]: GPS[FIX] e=-6.31 n=2.29 | drift=[0.070, -0.009, 2.0374]
+[gnss_corrector_node-4] [WARN] [1778131441.640369535] [gnss_corrector_node]: Heading spike rejected: innovation=1.359 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131442.140153924] [gnss_corrector_node]: Heading spike rejected: innovation=2.277 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131442.638228525] [gnss_corrector_node]: GPS[FIX] e=-5.29 n=3.38 | drift=[0.081, 0.077, 2.0374]
+[gnss_corrector_node-4] [WARN] [1778131442.639899760] [gnss_corrector_node]: Heading spike rejected: innovation=2.780 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131443.139688836] [gnss_corrector_node]: Heading spike rejected: innovation=-2.976 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131443.637487952] [gnss_corrector_node]: GPS[FIX] e=-3.83 n=3.84 | drift=[0.127, 0.155, 2.0374]
+[gnss_corrector_node-4] [WARN] [1778131444.139322272] [gnss_corrector_node]: Heading spike rejected: innovation=-1.721 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131444.637996359] [gnss_corrector_node]: GPS[FIX] e=-2.35 n=3.10 | drift=[0.208, 0.192, 2.0374]
+[gnss_corrector_node-4] [WARN] [1778131444.639625358] [gnss_corrector_node]: Heading spike rejected: innovation=-0.817 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131445.637041155] [gnss_corrector_node]: GPS[FIX] e=-1.58 n=1.87 | drift=[0.296, 0.187, 2.0367]
+[gnss_corrector_node-4] [WARN] [1778131445.638812328] [gnss_corrector_node]: Heading spike rejected: innovation=0.344 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131446.139656946] [gnss_corrector_node]: Heading spike rejected: innovation=0.566 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131446.637189748] [gnss_corrector_node]: GPS[FIX] e=-1.27 n=0.49 | drift=[0.361, 0.160, 2.0367]
+[gnss_corrector_node-4] [WARN] [1778131446.638994334] [gnss_corrector_node]: Heading spike rejected: innovation=1.040 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131447.137991576] [gnss_corrector_node]: Heading spike rejected: innovation=1.732 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131447.636879889] [gnss_corrector_node]: GPS[FIX] e=-2.05 n=-0.82 | drift=[0.385, 0.100, 2.0367]
+[gnss_corrector_node-4] [WARN] [1778131447.638606053] [gnss_corrector_node]: Heading spike rejected: innovation=2.642 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131448.138250893] [gnss_corrector_node]: Heading spike rejected: innovation=3.142 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131448.637332307] [gnss_corrector_node]: GPS[FIX] e=-3.24 n=-1.62 | drift=[0.379, 0.036, 2.0367]
+[gnss_corrector_node-4] [WARN] [1778131448.638222630] [gnss_corrector_node]: Heading spike rejected: innovation=-3.082 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131449.138527230] [gnss_corrector_node]: Heading spike rejected: innovation=-2.665 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131449.637168639] [gnss_corrector_node]: GPS[FIX] e=-4.67 n=-1.86 | drift=[0.341, -0.015, 2.0367]
+[gnss_corrector_node-4] [WARN] [1778131449.638260467] [gnss_corrector_node]: Heading spike rejected: innovation=-1.928 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131450.138126829] [gnss_corrector_node]: Heading spike rejected: innovation=-0.959 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131450.636943917] [gnss_corrector_node]: GPS[FIX] e=-5.79 n=-0.85 | drift=[0.263, -0.022, 2.0367]
+[gnss_corrector_node-4] [INFO] [1778131451.636023596] [gnss_corrector_node]: GPS[FIX] e=-6.31 n=0.44 | drift=[0.192, -0.068, 2.0067]
+[gnss_corrector_node-4] [WARN] [1778131452.137062093] [gnss_corrector_node]: Heading spike rejected: innovation=0.386 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131452.636178226] [gnss_corrector_node]: GPS[FIX] e=-6.48 n=1.91 | drift=[0.148, -0.005, 2.0466]
+[gnss_corrector_node-4] [WARN] [1778131452.637719241] [gnss_corrector_node]: Heading spike rejected: innovation=0.894 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131453.137940793] [gnss_corrector_node]: Heading spike rejected: innovation=1.882 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131453.635810096] [gnss_corrector_node]: GPS[FIX] e=-5.57 n=3.09 | drift=[0.143, 0.089, 2.0466]
+[gnss_corrector_node-4] [WARN] [1778131453.637370806] [gnss_corrector_node]: Heading spike rejected: innovation=2.855 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131454.635394437] [gnss_corrector_node]: GPS[FIX] e=-4.14 n=3.55 | drift=[0.182, 0.176, 2.0466]
+[gnss_corrector_node-4] [WARN] [1778131454.637153168] [gnss_corrector_node]: Heading spike rejected: innovation=-2.401 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131455.636977772] [gnss_corrector_node]: Heading spike rejected: innovation=-1.491 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131456.135524348] [gnss_corrector_node]: GPS[FIX] e=-2.72 n=3.28 | drift=[0.261, 0.253, 2.0466]
+[gnss_corrector_node-4] [WARN] [1778131456.636453385] [gnss_corrector_node]: Heading spike rejected: innovation=-1.365 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131457.135223888] [gnss_corrector_node]: GPS[FIX] e=-2.72 n=3.26 | drift=[0.295, 0.287, 2.0466]
+[gnss_corrector_node-4] [WARN] [1778131457.136977828] [gnss_corrector_node]: Heading spike rejected: innovation=-1.348 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131457.636437661] [gnss_corrector_node]: Heading spike rejected: innovation=-1.345 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131458.136398428] [gnss_corrector_node]: Heading spike rejected: innovation=-1.295 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131458.634502220] [gnss_corrector_node]: GPS[FIX] e=-2.29 n=2.83 | drift=[0.353, 0.308, 2.0466]
+[gnss_corrector_node-4] [WARN] [1778131458.636143440] [gnss_corrector_node]: Heading spike rejected: innovation=-0.654 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131460.132713827] [gnss_corrector_node]: GPS[FIX] e=-1.30 n=0.54 | drift=[0.426, 0.256, 2.0829]
+[gnss_corrector_node-4] [WARN] [1778131460.134633098] [gnss_corrector_node]: Heading spike rejected: innovation=0.667 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131460.635693319] [gnss_corrector_node]: Heading spike rejected: innovation=1.739 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131461.134346087] [gnss_corrector_node]: GPS[FIX] e=-2.25 n=-1.02 | drift=[0.420, 0.192, 2.0829]
+[gnss_corrector_node-4] [WARN] [1778131461.634786950] [gnss_corrector_node]: Heading spike rejected: innovation=-2.963 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131462.133034833] [gnss_corrector_node]: GPS[FIX] e=-3.83 n=-1.72 | drift=[0.370, 0.142, 2.0829]
+[gnss_corrector_node-4] [WARN] [1778131462.134687110] [gnss_corrector_node]: Heading spike rejected: innovation=-2.678 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131463.134586756] [gnss_corrector_node]: Heading spike rejected: innovation=-0.505 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131463.634194971] [gnss_corrector_node]: GPS[FIX] e=-5.88 n=-0.25 | drift=[0.239, 0.171, 2.0829]
+[gnss_corrector_node-4] [INFO] [1778131464.633739169] [gnss_corrector_node]: GPS[FIX] e=-6.43 n=1.51 | drift=[0.191, 0.244, 2.1109]
+[gnss_corrector_node-4] [WARN] [1778131464.635432081] [gnss_corrector_node]: Heading spike rejected: innovation=0.526 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131465.135008040] [gnss_corrector_node]: Heading spike rejected: innovation=1.314 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131465.633030872] [gnss_corrector_node]: GPS[FIX] e=-5.72 n=3.11 | drift=[0.201, 0.363, 2.1109]
+[gnss_corrector_node-4] [WARN] [1778131465.634770513] [gnss_corrector_node]: Heading spike rejected: innovation=2.097 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131466.135202704] [gnss_corrector_node]: Heading spike rejected: innovation=2.557 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131466.631530998] [gnss_corrector_node]: GPS[FIX] e=-4.66 n=4.20 | drift=[0.235, 0.451, 2.1109]
+[gnss_corrector_node-4] [WARN] [1778131467.135034210] [gnss_corrector_node]: Heading spike rejected: innovation=1.310 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131467.633601845] [gnss_corrector_node]: GPS[FIX] e=-4.62 n=5.59 | drift=[0.263, 0.467, 2.1109]
+[gnss_corrector_node-4] [WARN] [1778131467.635287502] [gnss_corrector_node]: Heading spike rejected: innovation=0.717 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131468.133389629] [gnss_corrector_node]: Heading spike rejected: innovation=0.398 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131468.632241431] [gnss_corrector_node]: GPS[FIX] e=-5.01 n=6.64 | drift=[0.302, 0.461, 2.1109]
+[gnss_corrector_node-4] [INFO] [1778131470.131970477] [gnss_corrector_node]: GPS[FIX] e=-5.81 n=9.04 | drift=[0.553, 0.612, 2.1951]
+[gnss_corrector_node-4] [INFO] [1778131471.132015333] [gnss_corrector_node]: GPS[FIX] e=-6.30 n=10.65 | drift=[0.827, 0.785, 2.2162]
+[gnss_corrector_node-4] [INFO] [1778131472.131182245] [gnss_corrector_node]: GPS[FIX] e=-6.93 n=12.32 | drift=[1.139, 0.974, 2.2289]
+[gnss_corrector_node-4] [INFO] [1778131473.131294212] [gnss_corrector_node]: GPS[FIX] e=-7.55 n=14.10 | drift=[1.456, 1.156, 2.2329]
+[gnss_corrector_node-4] [INFO] [1778131474.130540926] [gnss_corrector_node]: GPS[FIX] e=-8.16 n=15.66 | drift=[1.761, 1.328, 2.2274]
+[gnss_corrector_node-4] [INFO] [1778131475.130434407] [gnss_corrector_node]: GPS[FIX] e=-8.88 n=17.49 | drift=[2.112, 1.526, 2.2345]
+[gnss_corrector_node-4] [INFO] [1778131476.129855237] [gnss_corrector_node]: GPS[FIX] e=-9.66 n=19.53 | drift=[2.378, 1.656, 2.2125]
+[gnss_corrector_node-4] [INFO] [1778131477.130540538] [gnss_corrector_node]: GPS[FIX] e=-10.51 n=21.50 | drift=[2.648, 1.786, 2.2135]
+[gnss_corrector_node-4] [INFO] [1778131478.130185889] [gnss_corrector_node]: GPS[FIX] e=-11.40 n=23.53 | drift=[2.933, 1.929, 2.2118]
+[gnss_corrector_node-4] [INFO] [1778131479.630267464] [gnss_corrector_node]: GPS[FIX] e=-12.82 n=26.66 | drift=[3.488, 2.249, 2.2339]
+[gnss_corrector_node-4] [WARN] [1778131480.631514643] [gnss_corrector_node]: Heading spike rejected: innovation=0.436 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131481.129420454] [gnss_corrector_node]: GPS[FIX] e=-13.89 n=29.84 | drift=[4.338, 2.790, 2.2631]
+[gnss_corrector_node-4] [WARN] [1778131481.131345610] [gnss_corrector_node]: Heading spike rejected: innovation=0.455 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131482.129358541] [gnss_corrector_node]: GPS[FIX] e=-14.66 n=31.86 | drift=[4.980, 3.194, 2.2892]
+[gnss_corrector_node-4] [WARN] [1778131482.131893850] [gnss_corrector_node]: Heading spike rejected: innovation=0.435 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131482.631974914] [gnss_corrector_node]: Heading spike rejected: innovation=0.418 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131483.129978179] [gnss_corrector_node]: GPS[FIX] e=-15.50 n=33.79 | drift=[5.660, 3.627, 2.2892]
+[gnss_corrector_node-4] [INFO] [1778131484.129496010] [gnss_corrector_node]: GPS[FIX] e=-16.42 n=35.80 | drift=[6.590, 4.281, 2.3425]
+[gnss_corrector_node-4] [INFO] [1778131485.129223774] [gnss_corrector_node]: GPS[FIX] e=-17.23 n=37.82 | drift=[7.785, 5.182, 2.3840]
+[gnss_corrector_node-4] [INFO] [1778131486.129027599] [gnss_corrector_node]: GPS[FIX] e=-18.03 n=39.84 | drift=[8.927, 6.029, 2.3847]
+[gnss_corrector_node-4] [INFO] [1778131487.128491031] [gnss_corrector_node]: GPS[FIX] e=-18.81 n=41.75 | drift=[9.904, 6.734, 2.3946]
+[gnss_corrector_node-4] [INFO] [1778131488.128895354] [gnss_corrector_node]: GPS[FIX] e=-19.67 n=43.47 | drift=[11.102, 7.702, 2.4399]
+[gnss_corrector_node-4] [WARN] [1778131488.130480314] [gnss_corrector_node]: Heading spike rejected: innovation=0.358 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131488.630508257] [gnss_corrector_node]: Heading spike rejected: innovation=0.757 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131489.128067544] [gnss_corrector_node]: GPS[FIX] e=-20.04 n=45.01 | drift=[12.253, 8.666, 2.4399]
+[gnss_corrector_node-4] [WARN] [1778131489.129739722] [gnss_corrector_node]: Heading spike rejected: innovation=1.986 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131489.631608871] [gnss_corrector_node]: Heading spike rejected: innovation=-2.742 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131490.128780246] [gnss_corrector_node]: GPS[FIX] e=-19.11 n=45.68 | drift=[13.297, 9.406, 2.4399]
+[gnss_corrector_node-4] [WARN] [1778131490.130679096] [gnss_corrector_node]: Heading spike rejected: innovation=-1.606 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131491.128940199] [gnss_corrector_node]: GPS[FIX] e=-17.78 n=44.83 | drift=[14.126, 9.805, 2.4399]
+[gnss_corrector_node-4] [INFO] [1778131492.128307273] [gnss_corrector_node]: GPS[FIX] e=-16.90 n=43.22 | drift=[14.616, 9.946, 2.4474]
+[gnss_corrector_node-4] [INFO] [1778131493.128178899] [gnss_corrector_node]: GPS[FIX] e=-16.11 n=41.32 | drift=[14.925, 10.033, 2.4448]
+[gnss_corrector_node-4] [INFO] [1778131494.127835117] [gnss_corrector_node]: GPS[FIX] e=-15.46 n=39.43 | drift=[15.112, 10.123, 2.4733]
+[gnss_corrector_node-4] [INFO] [1778131495.126808891] [gnss_corrector_node]: GPS[FIX] e=-14.80 n=37.62 | drift=[15.387, 10.421, 2.5196]
+[gnss_corrector_node-4] [INFO] [1778131496.127487795] [gnss_corrector_node]: GPS[FIX] e=-14.26 n=35.69 | drift=[15.591, 10.768, 2.5540]
+[gnss_corrector_node-4] [INFO] [1778131497.127583760] [gnss_corrector_node]: GPS[FIX] e=-13.75 n=33.70 | drift=[15.735, 11.179, 2.5924]
+[gnss_corrector_node-4] [INFO] [1778131498.126204701] [gnss_corrector_node]: GPS[FIX] e=-13.42 n=31.57 | drift=[15.800, 11.681, 2.6382]
+[gnss_corrector_node-4] [INFO] [1778131499.126282134] [gnss_corrector_node]: GPS[FIX] e=-13.15 n=29.56 | drift=[15.759, 12.234, 2.6752]
+[gnss_corrector_node-4] [WARN] [1778131499.128052284] [gnss_corrector_node]: Heading spike rejected: innovation=0.372 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131500.128030634] [gnss_corrector_node]: GPS[FIX] e=-12.62 n=27.63 | drift=[15.538, 12.644, 2.7035]
+[gnss_corrector_node-4] [WARN] [1778131500.627855326] [gnss_corrector_node]: Heading spike rejected: innovation=-0.324 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131501.128807006] [gnss_corrector_node]: Heading spike rejected: innovation=-0.538 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131501.626679774] [gnss_corrector_node]: GPS[FIX] e=-11.40 n=24.77 | drift=[14.924, 12.863, 2.7071]
+[gnss_corrector_node-4] [WARN] [1778131501.628338742] [gnss_corrector_node]: Heading spike rejected: innovation=-0.610 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131502.627253974] [gnss_corrector_node]: GPS[FIX] e=-10.61 n=22.84 | drift=[14.324, 12.691, 2.7071]
+[gnss_corrector_node-4] [WARN] [1778131502.629319450] [gnss_corrector_node]: Heading spike rejected: innovation=-0.539 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131503.627196285] [gnss_corrector_node]: GPS[FIX] e=-9.76 n=20.93 | drift=[13.625, 12.337, 2.7071]
+[gnss_corrector_node-4] [WARN] [1778131503.629025164] [gnss_corrector_node]: Heading spike rejected: innovation=-0.476 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131504.626531365] [gnss_corrector_node]: GPS[FIX] e=-8.96 n=19.04 | drift=[12.856, 11.836, 2.7071]
+[gnss_corrector_node-4] [WARN] [1778131504.628159832] [gnss_corrector_node]: Heading spike rejected: innovation=-0.382 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131505.625278660] [gnss_corrector_node]: GPS[FIX] e=-8.15 n=17.03 | drift=[12.019, 11.234, 2.7071]
+[gnss_corrector_node-4] [WARN] [1778131505.626956968] [gnss_corrector_node]: Heading spike rejected: innovation=-0.350 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131506.626194190] [gnss_corrector_node]: GPS[FIX] e=-7.26 n=15.04 | drift=[11.121, 10.545, 2.7071]
+[gnss_corrector_node-4] [WARN] [1778131506.627843672] [gnss_corrector_node]: Heading spike rejected: innovation=-0.731 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131507.126446613] [gnss_corrector_node]: Heading spike rejected: innovation=-0.796 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131508.125666824] [gnss_corrector_node]: GPS[FIX] e=-5.94 n=12.21 | drift=[9.734, 9.394, 2.7071]
+[gnss_corrector_node-4] [WARN] [1778131508.127239085] [gnss_corrector_node]: Heading spike rejected: innovation=-0.367 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131509.125704765] [gnss_corrector_node]: GPS[FIX] e=-5.80 n=10.20 | drift=[8.794, 8.668, 2.7478]
+[gnss_corrector_node-4] [WARN] [1778131509.127270019] [gnss_corrector_node]: Heading spike rejected: innovation=0.970 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131509.627112202] [gnss_corrector_node]: Heading spike rejected: innovation=1.979 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131510.126032150] [gnss_corrector_node]: GPS[FIX] e=-6.80 n=8.67 | drift=[7.788, 8.138, 2.7478]
+[gnss_corrector_node-4] [WARN] [1778131510.127635738] [gnss_corrector_node]: Heading spike rejected: innovation=2.403 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131511.126498784] [gnss_corrector_node]: Heading spike rejected: innovation=2.782 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131511.625613523] [gnss_corrector_node]: GPS[FIX] e=-9.15 n=7.50 | drift=[6.276, 7.898, 2.7478]
+[gnss_corrector_node-4] [WARN] [1778131511.627411164] [gnss_corrector_node]: Heading spike rejected: innovation=2.372 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131512.125936206] [gnss_corrector_node]: Heading spike rejected: innovation=1.959 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131512.625074344] [gnss_corrector_node]: GPS[FIX] e=-10.23 n=6.46 | drift=[5.325, 8.007, 2.7478]
+[gnss_corrector_node-4] [WARN] [1778131512.626758046] [gnss_corrector_node]: Heading spike rejected: innovation=1.187 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131513.126184689] [gnss_corrector_node]: Heading spike rejected: innovation=0.585 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131513.625625822] [gnss_corrector_node]: GPS[FIX] e=-10.40 n=5.26 | drift=[4.367, 8.132, 2.7478]
+[gnss_corrector_node-4] [WARN] [1778131513.627151323] [gnss_corrector_node]: Heading spike rejected: innovation=-0.425 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131514.626248832] [gnss_corrector_node]: GPS[FIX] e=-10.20 n=5.07 | drift=[3.490, 8.184, 2.7478]
+[gnss_corrector_node-4] [WARN] [1778131514.627923621] [gnss_corrector_node]: Heading spike rejected: innovation=2.445 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131515.126574038] [gnss_corrector_node]: Heading spike rejected: innovation=0.671 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131515.625316977] [gnss_corrector_node]: GPS[FIX] e=-10.45 n=5.73 | drift=[2.872, 8.198, 2.7478]
+[gnss_corrector_node-4] [INFO] [1778131516.624500188] [gnss_corrector_node]: GPS[FIX] e=-10.50 n=7.17 | drift=[2.592, 8.375, 2.7896]
+[gnss_corrector_node-4] [WARN] [1778131516.626079781] [gnss_corrector_node]: Heading spike rejected: innovation=0.386 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131517.624751960] [gnss_corrector_node]: GPS[FIX] e=-10.66 n=8.59 | drift=[2.615, 8.716, 2.8255]
+[gnss_corrector_node-4] [WARN] [1778131517.626320662] [gnss_corrector_node]: Heading spike rejected: innovation=-0.347 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131518.125476990] [gnss_corrector_node]: Heading spike rejected: innovation=-0.723 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131518.625037118] [gnss_corrector_node]: GPS[FIX] e=-11.24 n=10.04 | drift=[2.847, 9.203, 2.8255]
+[gnss_corrector_node-4] [WARN] [1778131518.626651617] [gnss_corrector_node]: Heading spike rejected: innovation=-0.751 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131519.124622280] [gnss_corrector_node]: Heading spike rejected: innovation=-0.806 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131519.624158666] [gnss_corrector_node]: GPS[FIX] e=-11.88 n=11.55 | drift=[3.240, 9.797, 2.8255]
+[gnss_corrector_node-4] [WARN] [1778131519.625637652] [gnss_corrector_node]: Heading spike rejected: innovation=-0.814 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131520.124674862] [gnss_corrector_node]: Heading spike rejected: innovation=-0.801 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131520.622312899] [gnss_corrector_node]: GPS[FIX] e=-12.62 n=12.95 | drift=[3.733, 10.478, 2.8255]
+[gnss_corrector_node-4] [WARN] [1778131520.623904699] [gnss_corrector_node]: Heading spike rejected: innovation=-0.683 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131521.124166867] [gnss_corrector_node]: Heading spike rejected: innovation=-0.635 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131521.622185059] [gnss_corrector_node]: GPS[FIX] e=-13.12 n=14.35 | drift=[4.297, 11.199, 2.8255]
+[gnss_corrector_node-4] [WARN] [1778131522.123834195] [gnss_corrector_node]: Heading spike rejected: innovation=1.512 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131522.622678161] [gnss_corrector_node]: GPS[FIX] e=-12.43 n=15.17 | drift=[4.928, 11.750, 2.8063]
+[gnss_corrector_node-4] [WARN] [1778131522.624293287] [gnss_corrector_node]: Heading spike rejected: innovation=-2.681 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131523.124309056] [gnss_corrector_node]: Heading spike rejected: innovation=-1.007 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131523.622638335] [gnss_corrector_node]: GPS[FIX] e=-11.70 n=14.18 | drift=[5.441, 12.004, 2.8063]
+[gnss_corrector_node-4] [WARN] [1778131523.624124393] [gnss_corrector_node]: Heading spike rejected: innovation=-0.492 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131524.123394734] [gnss_corrector_node]: Heading spike rejected: innovation=-0.573 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131524.622995112] [gnss_corrector_node]: GPS[FIX] e=-11.11 n=12.65 | drift=[5.620, 11.997, 2.8063]
+[gnss_corrector_node-4] [WARN] [1778131524.624485458] [gnss_corrector_node]: Heading spike rejected: innovation=-0.737 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131525.124013402] [gnss_corrector_node]: Heading spike rejected: innovation=-0.438 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131525.622715878] [gnss_corrector_node]: GPS[FIX] e=-10.77 n=10.92 | drift=[5.499, 11.796, 2.8063]
+[gnss_corrector_node-4] [WARN] [1778131526.124021726] [gnss_corrector_node]: Heading spike rejected: innovation=-0.480 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131526.622587940] [gnss_corrector_node]: GPS[FIX] e=-10.32 n=9.31 | drift=[5.157, 11.467, 2.8063]
+[gnss_corrector_node-4] [WARN] [1778131527.124092571] [gnss_corrector_node]: Heading spike rejected: innovation=-0.574 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131527.622840814] [gnss_corrector_node]: GPS[FIX] e=-9.74 n=8.04 | drift=[4.669, 11.035, 2.8063]
+[gnss_corrector_node-4] [WARN] [1778131527.624603984] [gnss_corrector_node]: Heading spike rejected: innovation=-1.460 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131528.124912838] [gnss_corrector_node]: Heading spike rejected: innovation=2.680 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131528.622833345] [gnss_corrector_node]: GPS[FIX] e=-9.72 n=8.21 | drift=[4.217, 10.594, 2.8063]
+[gnss_corrector_node-4] [WARN] [1778131528.624414991] [gnss_corrector_node]: Heading spike rejected: innovation=0.471 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131529.124364151] [gnss_corrector_node]: Heading spike rejected: innovation=-0.556 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131529.623322049] [gnss_corrector_node]: GPS[FIX] e=-10.26 n=9.17 | drift=[4.002, 10.329, 2.8063]
+[gnss_corrector_node-4] [WARN] [1778131529.624894900] [gnss_corrector_node]: Heading spike rejected: innovation=-1.012 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131530.623833343] [gnss_corrector_node]: Heading spike rejected: innovation=-0.696 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131531.122325477] [gnss_corrector_node]: GPS[FIX] e=-11.39 n=11.55 | drift=[4.108, 10.489, 2.8063]
+[gnss_corrector_node-4] [WARN] [1778131531.123957507] [gnss_corrector_node]: Heading spike rejected: innovation=-0.353 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131532.123929060] [gnss_corrector_node]: Heading spike rejected: innovation=-0.416 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131532.623075691] [gnss_corrector_node]: GPS[FIX] e=-12.04 n=13.96 | drift=[4.652, 10.625, 2.7201]
+[gnss_corrector_node-4] [WARN] [1778131532.624665238] [gnss_corrector_node]: Heading spike rejected: innovation=-0.623 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131533.622246338] [gnss_corrector_node]: GPS[FIX] e=-12.29 n=13.87 | drift=[5.088, 10.709, 2.7201]
+[gnss_corrector_node-4] [WARN] [1778131533.623833304] [gnss_corrector_node]: Heading spike rejected: innovation=1.960 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131534.624292460] [gnss_corrector_node]: Heading spike rejected: innovation=-0.630 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131535.121834250] [gnss_corrector_node]: GPS[FIX] e=-11.52 n=12.45 | drift=[5.360, 10.609, 2.6870]
+[gnss_corrector_node-4] [WARN] [1778131535.123463204] [gnss_corrector_node]: Heading spike rejected: innovation=-0.648 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131535.623702587] [gnss_corrector_node]: Heading spike rejected: innovation=-0.719 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131536.122031491] [gnss_corrector_node]: GPS[FIX] e=-10.66 n=10.79 | drift=[5.247, 10.290, 2.6870]
+[gnss_corrector_node-4] [WARN] [1778131536.623529434] [gnss_corrector_node]: Heading spike rejected: innovation=-0.338 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131537.622399631] [gnss_corrector_node]: GPS[FIX] e=-9.95 n=8.03 | drift=[4.720, 9.539, 2.6506]
+[gnss_corrector_node-4] [WARN] [1778131537.623999988] [gnss_corrector_node]: Heading spike rejected: innovation=0.430 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131538.123515242] [gnss_corrector_node]: Heading spike rejected: innovation=0.850 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131538.622416177] [gnss_corrector_node]: GPS[FIX] e=-10.32 n=6.34 | drift=[4.166, 9.014, 2.6506]
+[gnss_corrector_node-4] [WARN] [1778131538.623992834] [gnss_corrector_node]: Heading spike rejected: innovation=0.964 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131539.123202058] [gnss_corrector_node]: Heading spike rejected: innovation=0.417 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131539.622032447] [gnss_corrector_node]: GPS[FIX] e=-10.31 n=4.94 | drift=[3.521, 8.596, 2.6506]
+[gnss_corrector_node-4] [WARN] [1778131540.124731417] [gnss_corrector_node]: Heading spike rejected: innovation=-1.071 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131540.622474009] [gnss_corrector_node]: GPS[FIX] e=-10.00 n=4.42 | drift=[2.880, 8.197, 2.6401]
+[gnss_corrector_node-4] [INFO] [1778131541.623159758] [gnss_corrector_node]: GPS[FIX] e=-10.71 n=4.33 | drift=[2.308, 7.835, 2.6401]
+[gnss_corrector_node-4] [WARN] [1778131541.624659025] [gnss_corrector_node]: Heading spike rejected: innovation=-0.757 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131542.623541444] [gnss_corrector_node]: GPS[FIX] e=-10.84 n=4.76 | drift=[1.907, 7.597, 2.6401]
+[gnss_corrector_node-4] [WARN] [1778131542.625454050] [gnss_corrector_node]: Heading spike rejected: innovation=-0.300 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131543.123159180] [gnss_corrector_node]: Heading spike rejected: innovation=-0.403 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131543.622547051] [gnss_corrector_node]: GPS[FIX] e=-10.87 n=4.90 | drift=[1.669, 7.476, 2.6401]
+[gnss_corrector_node-4] [WARN] [1778131543.624175430] [gnss_corrector_node]: Heading spike rejected: innovation=-0.808 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131544.123646970] [gnss_corrector_node]: Heading spike rejected: innovation=-0.761 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131544.621115455] [gnss_corrector_node]: GPS[FIX] e=-11.22 n=5.52 | drift=[1.540, 7.455, 2.6401]
+[gnss_corrector_node-4] [WARN] [1778131544.622671059] [gnss_corrector_node]: Heading spike rejected: innovation=-0.545 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131545.123637171] [gnss_corrector_node]: Heading spike rejected: innovation=-0.834 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131545.621141475] [gnss_corrector_node]: GPS[FIX] e=-11.23 n=5.54 | drift=[1.476, 7.459, 2.6401]
+[gnss_corrector_node-4] [WARN] [1778131545.622707687] [gnss_corrector_node]: Heading spike rejected: innovation=-0.744 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131546.623066121] [gnss_corrector_node]: GPS[FIX] e=-10.77 n=5.77 | drift=[1.417, 7.553, 2.6990]
+[gnss_corrector_node-4] [WARN] [1778131546.624693629] [gnss_corrector_node]: Heading spike rejected: innovation=1.389 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131547.123145917] [gnss_corrector_node]: Heading spike rejected: innovation=-2.841 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131547.622068976] [gnss_corrector_node]: GPS[FIX] e=-9.97 n=5.18 | drift=[1.407, 7.633, 2.6990]
+[gnss_corrector_node-4] [INFO] [1778131548.621124270] [gnss_corrector_node]: GPS[FIX] e=-9.72 n=4.28 | drift=[1.323, 7.599, 2.7310]
+[gnss_corrector_node-4] [WARN] [1778131548.622797888] [gnss_corrector_node]: Heading spike rejected: innovation=1.238 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131549.123757877] [gnss_corrector_node]: Heading spike rejected: innovation=2.729 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131549.622085112] [gnss_corrector_node]: GPS[FIX] e=-10.37 n=3.92 | drift=[1.125, 7.567, 2.7310]
+[gnss_corrector_node-4] [WARN] [1778131549.623654152] [gnss_corrector_node]: Heading spike rejected: innovation=-2.217 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131550.622698781] [gnss_corrector_node]: GPS[FIX] e=-11.15 n=4.36 | drift=[0.897, 7.618, 2.7310]
+[gnss_corrector_node-4] [WARN] [1778131550.624461697] [gnss_corrector_node]: Heading spike rejected: innovation=-1.010 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131551.623732658] [gnss_corrector_node]: Heading spike rejected: innovation=-1.345 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131552.121908864] [gnss_corrector_node]: GPS[FIX] e=-11.36 n=5.50 | drift=[0.796, 7.794, 2.7310]
+[gnss_corrector_node-4] [WARN] [1778131552.123466370] [gnss_corrector_node]: Heading spike rejected: innovation=-1.126 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131552.622478108] [gnss_corrector_node]: Heading spike rejected: innovation=-0.887 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131553.120625207] [gnss_corrector_node]: GPS[FIX] e=-11.02 n=6.49 | drift=[0.900, 7.930, 2.7310]
+[gnss_corrector_node-4] [WARN] [1778131553.122159888] [gnss_corrector_node]: Heading spike rejected: innovation=-1.030 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131553.622567140] [gnss_corrector_node]: Heading spike rejected: innovation=-1.045 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131554.121078869] [gnss_corrector_node]: GPS[FIX] e=-10.52 n=7.58 | drift=[1.181, 8.031, 2.7310]
+[gnss_corrector_node-4] [WARN] [1778131554.122681917] [gnss_corrector_node]: Heading spike rejected: innovation=-0.861 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131554.621995328] [gnss_corrector_node]: Heading spike rejected: innovation=-0.568 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131555.120679558] [gnss_corrector_node]: GPS[FIX] e=-9.40 n=8.30 | drift=[1.584, 8.038, 2.7310]
+[gnss_corrector_node-4] [WARN] [1778131555.621594945] [gnss_corrector_node]: Heading spike rejected: innovation=-1.138 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131556.121314169] [gnss_corrector_node]: GPS[FIX] e=-7.98 n=8.84 | drift=[2.064, 7.882, 2.7310]
+[gnss_corrector_node-4] [WARN] [1778131556.123018611] [gnss_corrector_node]: Heading spike rejected: innovation=2.890 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131556.621661312] [gnss_corrector_node]: Heading spike rejected: innovation=2.890 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131557.119667047] [gnss_corrector_node]: GPS[FIX] e=-6.71 n=9.09 | drift=[2.558, 7.567, 2.7310]
+[gnss_corrector_node-4] [WARN] [1778131557.121363245] [gnss_corrector_node]: Heading spike rejected: innovation=2.800 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131558.122005311] [gnss_corrector_node]: Heading spike rejected: innovation=-1.474 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131558.620233312] [gnss_corrector_node]: GPS[FIX] e=-4.86 n=7.98 | drift=[3.170, 6.852, 2.7310]
+[gnss_corrector_node-4] [WARN] [1778131558.621921326] [gnss_corrector_node]: Heading spike rejected: innovation=-0.811 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131559.122620608] [gnss_corrector_node]: Heading spike rejected: innovation=-0.811 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131559.620050123] [gnss_corrector_node]: GPS[FIX] e=-4.06 n=6.72 | drift=[3.313, 6.264, 2.7310]
+[gnss_corrector_node-4] [WARN] [1778131559.621730744] [gnss_corrector_node]: Heading spike rejected: innovation=-0.841 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131560.122258434] [gnss_corrector_node]: Heading spike rejected: innovation=-0.709 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131560.620760259] [gnss_corrector_node]: GPS[FIX] e=-3.48 n=5.66 | drift=[3.291, 5.637, 2.7310]
+[gnss_corrector_node-4] [WARN] [1778131561.122438885] [gnss_corrector_node]: Heading spike rejected: innovation=-0.515 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131562.120115567] [gnss_corrector_node]: GPS[FIX] e=-2.50 n=3.75 | drift=[3.058, 4.834, 2.7963]
+[gnss_corrector_node-4] [WARN] [1778131562.121892404] [gnss_corrector_node]: Heading spike rejected: innovation=-0.651 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131562.621636657] [gnss_corrector_node]: Heading spike rejected: innovation=-0.563 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131563.119536524] [gnss_corrector_node]: GPS[FIX] e=-1.76 n=1.68 | drift=[2.619, 4.143, 2.7963]
+[gnss_corrector_node-4] [WARN] [1778131563.121110258] [gnss_corrector_node]: Heading spike rejected: innovation=-0.455 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131564.119460776] [gnss_corrector_node]: GPS[FIX] e=-1.79 n=-0.36 | drift=[1.971, 3.409, 2.7912]
+[gnss_corrector_node-4] [WARN] [1778131564.121138991] [gnss_corrector_node]: Heading spike rejected: innovation=0.984 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131564.621390642] [gnss_corrector_node]: Heading spike rejected: innovation=1.968 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131565.119896106] [gnss_corrector_node]: GPS[FIX] e=-3.07 n=-1.65 | drift=[1.157, 2.879, 2.7912]
+[gnss_corrector_node-4] [WARN] [1778131565.121651532] [gnss_corrector_node]: Heading spike rejected: innovation=2.413 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131565.620945542] [gnss_corrector_node]: Heading spike rejected: innovation=2.844 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131566.120174807] [gnss_corrector_node]: GPS[FIX] e=-4.76 n=-2.09 | drift=[0.302, 2.684, 2.7912]
+[gnss_corrector_node-4] [WARN] [1778131566.121678531] [gnss_corrector_node]: Heading spike rejected: innovation=-2.732 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131566.621998859] [gnss_corrector_node]: Heading spike rejected: innovation=-1.682 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131567.118775484] [gnss_corrector_node]: GPS[FIX] e=-6.06 n=-1.05 | drift=[-0.383, 2.821, 2.7912]
+[gnss_corrector_node-4] [WARN] [1778131567.120284839] [gnss_corrector_node]: Heading spike rejected: innovation=-0.973 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131567.621937986] [gnss_corrector_node]: Heading spike rejected: innovation=-0.702 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131568.119500330] [gnss_corrector_node]: GPS[FIX] e=-6.77 n=0.60 | drift=[-0.715, 3.177, 2.7912]
+[gnss_corrector_node-4] [WARN] [1778131568.121179726] [gnss_corrector_node]: Heading spike rejected: innovation=-0.313 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131568.621612542] [gnss_corrector_node]: Heading spike rejected: innovation=0.536 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131569.120019928] [gnss_corrector_node]: GPS[FIX] e=-6.26 n=2.43 | drift=[-0.670, 3.591, 2.7912]
+[gnss_corrector_node-4] [WARN] [1778131569.121712817] [gnss_corrector_node]: Heading spike rejected: innovation=1.497 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131569.621279374] [gnss_corrector_node]: Heading spike rejected: innovation=2.371 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131570.119487625] [gnss_corrector_node]: GPS[FIX] e=-4.63 n=3.31 | drift=[-0.333, 3.787, 2.7912]
+[gnss_corrector_node-4] [WARN] [1778131570.120963371] [gnss_corrector_node]: Heading spike rejected: innovation=2.973 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131570.622173624] [gnss_corrector_node]: Heading spike rejected: innovation=-2.317 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131571.119418043] [gnss_corrector_node]: GPS[FIX] e=-2.97 n=2.79 | drift=[0.069, 3.658, 2.7912]
+[gnss_corrector_node-4] [WARN] [1778131571.121079713] [gnss_corrector_node]: Heading spike rejected: innovation=-1.418 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131571.621229067] [gnss_corrector_node]: Heading spike rejected: innovation=-0.721 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131572.119396307] [gnss_corrector_node]: GPS[FIX] e=-1.98 n=1.24 | drift=[0.250, 3.261, 2.7912]
+[gnss_corrector_node-4] [WARN] [1778131572.121188130] [gnss_corrector_node]: Heading spike rejected: innovation=-0.382 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131573.119501773] [gnss_corrector_node]: GPS[FIX] e=-1.85 n=-0.38 | drift=[0.160, 2.768, 2.7912]
+[gnss_corrector_node-4] [WARN] [1778131573.121105664] [gnss_corrector_node]: Heading spike rejected: innovation=0.742 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131573.621502570] [gnss_corrector_node]: Heading spike rejected: innovation=1.737 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131574.118115221] [gnss_corrector_node]: GPS[FIX] e=-3.07 n=-1.62 | drift=[-0.206, 2.402, 2.7912]
+[gnss_corrector_node-4] [WARN] [1778131574.119759385] [gnss_corrector_node]: Heading spike rejected: innovation=2.408 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131574.621488871] [gnss_corrector_node]: Heading spike rejected: innovation=2.791 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131575.118065749] [gnss_corrector_node]: GPS[FIX] e=-4.88 n=-1.97 | drift=[-0.723, 2.344, 2.7912]
+[gnss_corrector_node-4] [WARN] [1778131575.119711508] [gnss_corrector_node]: Heading spike rejected: innovation=-2.595 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131575.620283092] [gnss_corrector_node]: Heading spike rejected: innovation=-1.563 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131576.119118035] [gnss_corrector_node]: GPS[FIX] e=-6.14 n=-0.50 | drift=[-1.095, 2.612, 2.7912]
+[gnss_corrector_node-4] [WARN] [1778131576.120612498] [gnss_corrector_node]: Heading spike rejected: innovation=-0.719 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131577.118945127] [gnss_corrector_node]: GPS[FIX] e=-6.73 n=1.22 | drift=[-1.121, 3.007, 2.7163]
+[gnss_corrector_node-4] [WARN] [1778131577.621594644] [gnss_corrector_node]: Heading spike rejected: innovation=0.699 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131578.117880907] [gnss_corrector_node]: GPS[FIX] e=-6.27 n=2.50 | drift=[-0.909, 3.387, 2.7349]
+[gnss_corrector_node-4] [WARN] [1778131578.119533567] [gnss_corrector_node]: Heading spike rejected: innovation=1.868 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131578.621396143] [gnss_corrector_node]: Heading spike rejected: innovation=2.531 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131579.119295656] [gnss_corrector_node]: GPS[FIX] e=-4.60 n=3.20 | drift=[-0.513, 3.546, 2.7349]
+[gnss_corrector_node-4] [WARN] [1778131579.120975878] [gnss_corrector_node]: Heading spike rejected: innovation=3.018 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131579.620196037] [gnss_corrector_node]: Heading spike rejected: innovation=-2.680 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131580.120255424] [gnss_corrector_node]: GPS[FIX] e=-2.71 n=2.62 | drift=[-0.092, 3.371, 2.7349]
+[gnss_corrector_node-4] [WARN] [1778131580.122694985] [gnss_corrector_node]: Heading spike rejected: innovation=-1.751 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131580.620318317] [gnss_corrector_node]: Heading spike rejected: innovation=-1.089 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131581.118867177] [gnss_corrector_node]: GPS[FIX] e=-1.52 n=1.09 | drift=[0.118, 2.936, 2.7349]
+[gnss_corrector_node-4] [WARN] [1778131581.120517721] [gnss_corrector_node]: Heading spike rejected: innovation=-0.917 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131581.620285171] [gnss_corrector_node]: Heading spike rejected: innovation=-1.209 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131582.117596664] [gnss_corrector_node]: GPS[FIX] e=-0.39 n=0.25 | drift=[0.129, 2.380, 2.7349]
+[gnss_corrector_node-4] [WARN] [1778131582.119203494] [gnss_corrector_node]: Heading spike rejected: innovation=-2.321 rad (limit=0.300).
+[gnss_corrector_node-4] [WARN] [1778131582.620980754] [gnss_corrector_node]: Heading spike rejected: innovation=2.491 rad (limit=0.300).
+[gnss_corrector_node-4] [INFO] [1778131583.117715971] [gnss_corrector_node]: GPS[FIX] e=0.04 n=0.17 | drift=[0.089, 1.776, 2.7349]
+[gnss_corrector_node-4] [INFO] [1778131584.117977581] [gnss_corrector_node]: GPS[FIX] e=0.06 n=0.02 | drift=[0.048, 1.253, 2.6740]
+[gnss_corrector_node-4] [INFO] [1778131585.118366902] [gnss_corrector_node]: GPS[FIX] e=0.07 n=0.01 | drift=[0.010, 0.860, 2.5927]
+[gnss_corrector_node-4] [INFO] [1778131586.116262430] [gnss_corrector_node]: GPS[FIX] e=0.06 n=0.03 | drift=[-0.025, 0.568, 2.5326]
+[gnss_corrector_node-4] [INFO] [1778131587.116745065] [gnss_corrector_node]: GPS[FIX] e=0.06 n=0.00 | drift=[-0.058, 0.347, 2.4960]
+[gnss_corrector_node-4] [INFO] [1778131588.116665893] [gnss_corrector_node]: GPS[FIX] e=0.06 n=0.01 | drift=[-0.084, 0.180, 2.4746]
+[gnss_corrector_node-4] [INFO] [1778131589.117147120] [gnss_corrector_node]: GPS[FIX] e=0.06 n=0.01 | drift=[-0.104, 0.056, 2.4559]
+[gnss_corrector_node-4] [INFO] [1778131590.617157038] [gnss_corrector_node]: GPS[FIX] e=0.06 n=0.00 | drift=[-0.129, -0.076, 2.4381]
+[gnss_corrector_node-4] [INFO] [1778131591.616458327] [gnss_corrector_node]: GPS[FIX] e=0.06 n=0.01 | drift=[-0.141, -0.136, 2.4287]
+

@@ -1,0 +1,33 @@
+navsat_transform_node:
+  ros__parameters:
+    frequency: 30.0
+    delay: 0.0
+
+    # 서울 기준 자기편각 (도 단위 → 라디안)
+    # 서울: 약 7.5도 서편 → -0.131 rad
+    # 정확한 값: https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml
+    # magnetic_declination_radians: -0.131
+    magnetic_declination_radians: 0.0
+
+    # heading 기준계
+    # Dual RTK heading이 ENU 기준이면 0.0
+    # NED 기준이면 1.5708
+    # 실측 보간: 0.0→+59°, 1.03→-8° → 선형 보간 정렬값 ≈ 0.91 rad
+    # yaw_offset: 1.144873
+    # yaw_offset: 1.03
+    yaw_offset: 0.91
+
+    zero_altitude: false
+    broadcast_utm_transform: true
+    broadcast_utm_transform_as_parent_frame: false
+    publish_filtered_gps: true
+
+    # GPS heading 사용 (use_odometry_yaw: false → /gps/imu 헤딩 사용)
+    use_odometry_yaw: false
+
+    # datum 수동 지정 (0이면 자동)
+    # 첫 번째 GPS fix 값으로 채워넣기
+    wait_for_datum: false
+    # datum: [37.48700361783333, 127.12121780516667, 107.9039]
+
+    use_sim_time: true
