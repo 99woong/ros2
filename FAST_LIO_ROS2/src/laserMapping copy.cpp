@@ -96,8 +96,6 @@ int    effct_feat_num = 0, time_log_counter = 0, scan_count = 0, publish_count =
 int    iterCount = 0, feats_down_size = 0, NUM_MAX_ITERATIONS = 0, laserCloudValidNum = 0, pcd_save_interval = -1, pcd_index = 0;
 bool   point_selected_surf[100000] = {0};
 bool   lidar_pushed, flg_first_scan = true, flg_exit = false, flg_EKF_inited;
-double ceiling_z_threshold = 1.0;  // 천장 제거 높이 임계값 (미터), 파라미터로 조정 가능
-double floor_z_threshold = -0.6;  // 바닥 제거 높이 임계값 (미터), 파라미터로 조정 가능
 bool   scan_pub_en = false, dense_pub_en = false, scan_body_pub_en = false;
 bool    is_first_lidar = true;
 
@@ -497,25 +495,14 @@ void publish_frame_world(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::Share
         PointCloudXYZI::Ptr laserCloudWorld( \
                         new PointCloudXYZI(size, 1));
 
-        PointCloudXYZI::Ptr laserCloudWorldFiltered(new PointCloudXYZI());
         for (int i = 0; i < size; i++)
         {
-            PointType pt_world;
-            RGBpointBodyToWorld(&laserCloudFullRes->points[i], &pt_world);
-
-            // 높이 필터: 2m 이상 천장 포인트 제거 (/cloud_registered)
-            if (pt_world.z <= ceiling_z_threshold && pt_world.z >= floor_z_threshold)
-            {
-                laserCloudWorldFiltered->points.push_back(pt_world);
-            }
+            RGBpointBodyToWorld(&laserCloudFullRes->points[i], \
+                                &laserCloudWorld->points[i]);
         }
 
-        laserCloudWorldFiltered->width = laserCloudWorldFiltered->points.size();
-        laserCloudWorldFiltered->height = 1;
-        laserCloudWorldFiltered->is_dense = true;
-
         sensor_msgs::msg::PointCloud2 laserCloudmsg;
-        pcl::toROSMsg(*laserCloudWorldFiltered, laserCloudmsg);
+        pcl::toROSMsg(*laserCloudWorld, laserCloudmsg);
         // laserCloudmsg.header.stamp = ros::Time().fromSec(lidar_end_time);
         laserCloudmsg.header.stamp = get_ros_time(lidar_end_time);
         laserCloudmsg.header.frame_id = "camera_init";
@@ -595,24 +582,16 @@ void publish_map(rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub
 {
     PointCloudXYZI::Ptr laserCloudFullRes(dense_pub_en ? feats_undistort : feats_down_body);
     int size = laserCloudFullRes->points.size();
-    PointCloudXYZI::Ptr laserCloudWorld(new PointCloudXYZI());
+    PointCloudXYZI::Ptr laserCloudWorld( \
+                    new PointCloudXYZI(size, 1));
 
     std::cout << "publish_map" << std::endl;
 
     for (int i = 0; i < size; i++)
     {
-        PointType pt_world;
-        RGBpointBodyToWorld(&laserCloudFullRes->points[i], &pt_world);
-
-        // 높이 필터: ceiling_z_threshold 이상 포인트 제거
-        if (pt_world.z <= ceiling_z_threshold && pt_world.z >= floor_z_threshold)
-        {
-            laserCloudWorld->points.push_back(pt_world);
-        }
+        RGBpointBodyToWorld(&laserCloudFullRes->points[i], \
+                            &laserCloudWorld->points[i]);
     }
-    laserCloudWorld->width = laserCloudWorld->points.size();
-    laserCloudWorld->height = 1;
-    laserCloudWorld->is_dense = true;
     *pcl_wait_pub += *laserCloudWorld;
 
     sensor_msgs::msg::PointCloud2 laserCloudmsg;
@@ -878,8 +857,6 @@ public:
         this->declare_parameter<int>("pcd_save.interval", -1);
         this->declare_parameter<vector<double>>("mapping.extrinsic_T", vector<double>());
         this->declare_parameter<vector<double>>("mapping.extrinsic_R", vector<double>());
-        this->declare_parameter<double>("publish.ceiling_z_threshold", 1.0);  // 천장 제거 높이 임계값 (기본값 2.0m)
-        this->declare_parameter<double>("publish.floor_z_threshold", -0.6);  // 천장 제거 높이 임계값 (기본값 2.0m)
 
         this->get_parameter_or<bool>("publish.path_en", path_en, true);
         this->get_parameter_or<bool>("publish.effect_map_en", effect_pub_en, false);
@@ -916,9 +893,6 @@ public:
         this->get_parameter_or<int>("pcd_save.interval", pcd_save_interval, -1);
         this->get_parameter_or<vector<double>>("mapping.extrinsic_T", extrinT, vector<double>());
         this->get_parameter_or<vector<double>>("mapping.extrinsic_R", extrinR, vector<double>());
-        this->get_parameter_or<double>("publish.ceiling_z_threshold", ceiling_z_threshold, 1.0);
-        this->get_parameter_or<double>("publish.floor_z_threshold", floor_z_threshold, -0.6);
-        RCLCPP_INFO(this->get_logger(), "Ceiling Z threshold: %.2f m (points above this height will be filtered from /cloud_registered and /Laser_map)", ceiling_z_threshold);
 
         RCLCPP_INFO(this->get_logger(), "p_pre->lidar_type %d", p_pre->lidar_type);
 

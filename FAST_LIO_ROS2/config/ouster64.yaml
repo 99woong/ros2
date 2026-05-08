@@ -1,10 +1,14 @@
 /**:
     ros__parameters:
         feature_extract_enable: false
-        point_filter_num: 3
+        # point_filter_num: 3
+        point_filter_num: 1
+        # point_filter_num: 2
         max_iteration: 3
-        filter_size_surf: 0.5
-        filter_size_map: 0.5
+        # filter_size_surf: 0.5
+        filter_size_surf: 0.2
+        # filter_size_map: 0.5
+        filter_size_map: 0.2
         cube_side_length: 1000.0
         runtime_pos_log_enable: false
         map_file_path: "./test.pcd"
@@ -21,24 +25,19 @@
             lidar_type: 3                # 1 for Livox serials LiDAR, 2 for Velodyne LiDAR, 3 for ouster LiDAR, 
             scan_line: 32
             timestamp_unit: 3                 # 0-second, 1-milisecond, 2-microsecond, 3-nanosecond.
-            blind: 4.0
+            blind: 1.0
 
         mapping:
             acc_cov: 0.9
             gyr_cov: 0.9
             b_acc_cov: 0.1
             b_gyr_cov: 0.1
-            # acc_cov: 0.001
-            # gyr_cov: 0.001
-            # b_acc_cov: 0.001
-            # b_gyr_cov: 0.0001
-            fov_degree:    360.0
-            det_range:     150.0
+            fov_degree:    180.0
+            det_range:     30.0
             extrinsic_est_en:  false      # true: enable the online estimation of IMU-LiDAR extrinsic
-            # extrinsic_est_en:  true      # true: enable the online estimation of IMU-LiDAR extrinsic
             extrinsic_T: [ 0.0, 0.0, 0.0 ]
-            extrinsic_R: [1., 0., 0.,
-                        0., 1., 0.,
+            extrinsic_R: [-1., 0., 0.,
+                        0., -1., 0.,
                         0., 0., 1.]
 
         publish:
@@ -47,6 +46,8 @@
             dense_publish_en: true       # false: low down the points number in a global-frame point clouds scan.
             scan_bodyframe_pub_en: true  # true: output the point cloud scans in IMU-body-frame
             map_en: true
+            ceiling_z_threshold: 1.5
+            floor_z_threshold: -0.6
             
 
         pcd_save:
