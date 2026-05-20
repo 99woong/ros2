@@ -1,0 +1,21 @@
+<?xml version="1.0"?>
+<package format="3">
+  <name>time_sync_calib</name>
+  <version>1.0.0</version>
+  <description>IMU time synchronization verification using cross-correlation</description>
+  <maintainer email="user@example.com">user</maintainer>
+  <license>MIT</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>rosbag2_cpp</depend>
+  <depend>rosbag2_storage</depend>
+  <depend>eigen3_cmake_module</depend>
+  <depend>eigen</depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>
