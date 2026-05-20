@@ -814,25 +814,6 @@ void h_share_model(state_ikfom &s, esekfom::dyn_share_datastruct<double> &ekfom_
         ekfom_data.h(i) = -norm_p.intensity;
     }
 
-    if (extrinsic_est_en) 
-    {
-        static int count = 0;
-        if (count++ % 10 == 0) 
-        { // 스캔 10번당 1번 출력 (약 1초 주기)
-            V3D t_est = s.offset_T_L_I;
-            M3D r_est = s.offset_R_L_I.toRotationMatrix();
-
-            printf("\033[1;32m--- Copy these values to your YAML config ---\033[0m\n");
-            printf("extrinsic_T: [%.6f, %.6f, %.6f]\n", t_est[0], t_est[1], t_est[2]);
-            printf("extrinsic_R: [%.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f]\n", 
-                    r_est(0,0), r_est(0,1), r_est(0,2), 
-                    r_est(1,0), r_est(1,1), r_est(1,2), 
-                    r_est(2,0), r_est(2,1), r_est(2,2));
-            printf("\033[1;32m-------------------------------------------\033[0m\n");
-        }
-    }
-
-
     solve_time += omp_get_wtime() - solve_start_;
 
 
@@ -1111,6 +1092,28 @@ private:
             geoQuat.y = state_point.rot.coeffs()[1];
             geoQuat.z = state_point.rot.coeffs()[2];
             geoQuat.w = state_point.rot.coeffs()[3];
+
+            if (extrinsic_est_en)
+            {
+                static int ext_log_count = 0;
+                if (ext_log_count++ % 10 == 0)  // ~1초 주기 (10Hz LiDAR 기준)
+                {
+                    const V3D &t = state_point.offset_T_L_I;
+                    M3D R = state_point.offset_R_L_I.toRotationMatrix();
+                    V3D rpy = SO3ToEuler(state_point.offset_R_L_I);  // roll pitch yaw [deg]
+                    RCLCPP_INFO(this->get_logger(),
+                        "\033[1;33m[Extrinsic Est] T=[%.4f, %.4f, %.4f]  RPY=[%.2f, %.2f, %.2f] deg\033[0m",
+                        t[0], t[1], t[2], rpy[0], rpy[1], rpy[2]);
+                    RCLCPP_INFO(this->get_logger(),
+                        "\033[1;33m[Extrinsic Est] extrinsic_T: [%.6f, %.6f, %.6f]\033[0m",
+                        t[0], t[1], t[2]);
+                    RCLCPP_INFO(this->get_logger(),
+                        "\033[1;33m[Extrinsic Est] extrinsic_R: [%.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f, %.6f]\033[0m",
+                        R(0,0), R(0,1), R(0,2),
+                        R(1,0), R(1,1), R(1,2),
+                        R(2,0), R(2,1), R(2,2));
+                }
+            }
 
             double t_update_end = omp_get_wtime();
 
