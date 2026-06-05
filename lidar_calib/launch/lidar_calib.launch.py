@@ -19,7 +19,9 @@ def generate_launch_description():
     auto_config = PathJoinSubstitution([
         pkg, 'config',
         PythonExpression([
-            "'params_ouster.yaml' if '", mode, "' == 'ouster' else 'params_general.yaml'"
+            "'params_ouster.yaml' if '", mode, "' == 'ouster' else "
+            "'params_general_3m_test.yaml' if '", mode, "' == '3m_test' else "
+            "'params_general.yaml'"
         ]),
     ])
 
@@ -27,7 +29,7 @@ def generate_launch_description():
         DeclareLaunchArgument(
             'mode',
             default_value='general',
-            description='"general" (Isaac Sim / 기본 PointCloud2) 또는 "ouster" (실차 ouster_ros)'),
+            description='"general" | "3m_test" (Isaac Sim 3m 간격) | "ouster" (실차)'),
 
         DeclareLaunchArgument(
             'params_file',
