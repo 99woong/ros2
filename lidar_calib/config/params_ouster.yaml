@@ -1,0 +1,54 @@
+lidar_calibration_node:
+  ros__parameters:
+
+    # ── 모드 ──────────────────────────────────────────────────────────────────
+    lidar_mode: "ouster"    # 실차 ouster_ros 드라이버
+
+    # ── Topics ────────────────────────────────────────────────────────────────
+    # ouster_ros 드라이버를 두 개 인스턴스로 기동할 때의 기본 토픽.
+    # 실제 네임스페이스에 맞게 수정하세요.
+    #   예) 전방: ros2 run ouster_ros driver --ros-args -r points:=/ouster1/points
+    #       후방: ros2 run ouster_ros driver --ros-args -r points:=/ouster2/points
+    lidar1_topic: "/ouster1/points"   # 전방 LiDAR (기준)
+    lidar2_topic: "/ouster2/points"   # 후방 LiDAR (교정 대상)
+
+    # ── Frame names ───────────────────────────────────────────────────────────
+    # ouster_ros 드라이버 기본 프레임 ID
+    lidar1_frame: "os_sensor"
+    lidar2_frame: "os_sensor2"
+
+    # ── Time sync ─────────────────────────────────────────────────────────────
+    # PTP(IEEE 1588) 하드웨어 동기화 환경에서는 두 클라우드의 타임스탬프 차이가
+    # 수 μs 이내로 유지됨. ApproximateTime slop 을 10 ms 로 좁혀 정밀 매칭.
+    #
+    # ※ ExactTime 은 사용 불가:
+    #   두 센서가 독립적으로 스캔을 시작하기 때문에 나노초 단위 타임스탬프가
+    #   절대 일치하지 않음. PTP 환경에서도 ApproximateTime 이 올바른 선택.
+    sync_slop_sec: 0.01    # PTP 환경 권장값 (10 ms)
+
+    # ── Initial transform guess: lidar2 in lidar1 frame ───────────────────────
+    init_x:  -14.52
+    init_y:   -2.908
+    init_z:    0.0
+
+    yaw_candidates: 8
+
+    # ── Preprocessing ─────────────────────────────────────────────────────────
+    # ouster 드라이버는 유효 범위 밖 포인트를 NaN 으로 채울 수 있음.
+    # 노드 내부에서 pcl::removeNaNFromPointCloud 를 자동 적용함.
+    voxel_size:  0.2
+    min_z:      -2.0
+    max_z:       5.0
+    min_range:   1.5    # ouster 자기반사 제거 (실차 지면반사 포함)
+    max_range:  60.0
+
+    # ── ICP ───────────────────────────────────────────────────────────────────
+    search_correspondence_distance: 6.0   # 조합 탐색 시 초기 오차 여유
+    refine_correspondence_distance: 1.0
+    max_iterations:              100
+    transformation_epsilon:      1.0e-8
+    euclidean_fitness_epsilon:   1.0e-6
+    fitness_score_threshold:     0.3   # 실차 환경은 더 엄격하게
+
+    # ── Output ────────────────────────────────────────────────────────────────
+    output_path: "/tmp/lidar_calib_result.yaml"

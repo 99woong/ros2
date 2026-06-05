@@ -1,0 +1,77 @@
+lidar_calibration_node:
+  ros__parameters:
+
+    # ── 모드 ──────────────────────────────────────────────────────────────────
+    lidar_mode: "general"
+
+    # ── Topics / Frames ───────────────────────────────────────────────────────
+    lidar1_topic: "/point_cloud"
+    lidar2_topic: "/point_cloud2"
+    lidar1_frame: "lidar_front"
+    lidar2_frame: "lidar_rear"
+
+    # ── Time sync ─────────────────────────────────────────────────────────────
+    sync_slop_sec: 0.05
+
+    # ── Preprocessing ─────────────────────────────────────────────────────────
+    voxel_size:  0.5    # 0.1m → overflow (260m bbox / 0.1m = 2600³ > int32). 0.5m = 520×520×60 = 16M ok
+    min_z:      -25.0   # LiDAR 장착 높이 5m + 원거리 저고도 빔 (120m×sin20°≈-41m → 여유 -25m)
+    max_z:        5.0
+    min_range:    1.0
+    max_range:  130.0   # 실측 최대 거리 ~120m 커버
+
+    # ── Sphere Calibration (초기값 완전 불필요) ──────────────────────────────
+    # Isaac Sim 에서 구 3개를 아래 권장 위치에 배치:
+    #   구A: ( 10,  0, 0.5)  ← 차량 좌측 외부
+    #   구B: (-10,  0, 0.5)  ← 차량 우측 외부
+    #   구C: (  0,-15, 0.5)  ← 차량 전방 원거리
+    # 세 구가 직선이 되면 SVD 불안정 → 삼각형 배치 필수
+    sphere_radius:           0.5    # 구 반지름 [m] — Isaac Sim 구 크기와 일치
+    sphere_radius_tolerance: 0.1    # RANSAC 허용 오차 [m]
+    sphere_cluster_tolerance: 0.4   # 클러스터링 거리 임계값 [m]
+    sphere_min_cluster_size:   15   # 클러스터 최소 포인트 수
+    sphere_max_cluster_size: 3000   # 클러스터 최대 포인트 수
+
+    # ── Multi-yaw ICP: 번역 초기값 (yaw 는 자동 탐색) ─────────────────────────
+    # Isaac Sim 센서 위치:
+    #   lidar1 (전방): x=1.454, y=-7.26  →  lidar2-lidar1 Δ = (-2.908, +14.52)
+    #   lidar2 (후방): x=-1.454, y=7.26
+    # lidar1 frame 기준 (X_lidar1 = 차량 전방 = -Y_world):
+    #   init_x = -14.52,  init_y = -2.908
+    init_x:  -14.52
+    init_y:   -2.908
+    init_z:    0.0
+
+    # 탐색 방향 수: 360° / yaw_candidates 간격으로 ICP 시도
+    # 8 → 45° 간격 (기본),  16 → 22.5° 간격 (정밀)
+    yaw_candidates: 8
+
+    # ── ICP 파라미터 ──────────────────────────────────────────────────────────
+    # 탐색 단계 (넓게): 초기 오정렬을 극복하기 위해 크게 설정
+    search_correspondence_distance: 3.0
+    # 정제 단계 (좁게): 정밀 정렬용
+    refine_correspondence_distance: 1.0
+
+    max_iterations:            100
+    transformation_epsilon:    1.0e-8
+    euclidean_fitness_epsilon: 1.0e-6
+    fitness_score_threshold:   0.5
+
+    # ── Cube Calibration (큐브 타겟 기반, 초기값 완전 불필요) ─────────────────
+    # 큐브 크기: 1m × 1m × 2m
+    # 큐브 배치 (차량 중심 기준):
+    #   object1: ( -5, -10, 1)  lidar1 근접 7.0m  / lidar2 원거리 17.6m
+    #   object2: (  5,  10, 1)  lidar1 원거리 17.6m / lidar2 근접  7.0m
+    #   object3: (  0,  15, 1)  lidar1 원거리 22.3m / lidar2 근접  7.9m
+    # 삼각형 면적 = 75 m²  (SVD conditioning 양호)
+    cube_size_xy:            1.0    # 큐브 수평 변 길이 [m]
+    cube_size_z:             2.0    # 큐브 높이 [m]
+    cube_size_tolerance:     0.4    # bbox 크기 허용 오차 [m]
+    cube_cluster_tolerance:  0.40   # 클러스터링 거리 [m] — 차량 프레임 빔 차단으로 0.30m 간격 발생 → 0.40m 필요
+    cube_min_cluster_size:   5      # 클러스터 최소 포인트 수 (원거리 22m 고려)
+    cube_max_cluster_size:   2000   # 클러스터 최대 포인트 수
+    cube_plane_inlier_min:   0.5    # plane RANSAC 최소 inlier 비율 (0.4는 차체 오검출 허용)
+    cube_min_distance:       5.0    # 클러스터 무게중심 최소 거리 [m] — 차체 오검출 방지
+
+    # ── Output ────────────────────────────────────────────────────────────────
+    output_path: "/tmp/lidar_calib_result.yaml"

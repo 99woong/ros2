@@ -1,0 +1,104 @@
+lidar_calibration_node:
+  ros__parameters:
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # Isaac Sim 검증용 — LiDAR 간 3m 간격 테스트
+    #
+    # 목적: 15m 배치에서 발생하는 비대칭 검출 품질 문제 제거
+    #       양쪽 LiDAR가 동일 큐브를 비슷한 거리(4~8m)에서 바라보도록 배치
+    #
+    # LiDAR 배치 (Isaac Sim 기준):
+    #   LiDAR1 (기준): x=0.0,  y=0.0,  z=0.5  frame: sim_lidar
+    #   LiDAR2 (대상): x=3.0,  y=0.0,  z=0.5  frame: sim_lidar2
+    #   → 둘 다 +Y 방향을 바라보도록 세팅
+    #
+    # 큐브 배치 (1m×1m×1m 정육면체, 3개):
+    #
+    #              Y(전방)
+    #              ↑
+    #   ■ 큐브B    |          ■ 큐브C
+    #  (-2, 6, 1) |         (5, 6, 1)
+    #              |
+    #         ■ 큐브A (1.5, 4, 1)
+    #              |
+    #   LiDAR1 ★──3m──★ LiDAR2      → X
+    #   (0,0)         (3,0)
+    #
+    # 각 큐브의 LiDAR 거리:
+    #   큐브A: LiDAR1=4.3m / LiDAR2=3.4m  →  pts ≈ 440 / 710
+    #   큐브B: LiDAR1=6.3m / LiDAR2=7.8m  →  pts ≈ 170 / 110
+    #   큐브C: LiDAR1=7.8m / LiDAR2=6.3m  →  pts ≈ 110 / 170
+    #
+    # 삼각형 면적(LiDAR1 기준): 6.75 m²  (기준 5m² 초과 → SVD 안정)
+    # ══════════════════════════════════════════════════════════════════════════
+
+    # ── 모드 ──────────────────────────────────────────────────────────────────
+    lidar_mode: "general"
+
+    # ── Topics / Frames ───────────────────────────────────────────────────────
+    lidar1_topic: "/point_cloud"
+    lidar2_topic: "/point_cloud2"
+    lidar1_frame: "sim_lidar"
+    lidar2_frame: "sim_lidar2"
+
+    # ── Time sync ─────────────────────────────────────────────────────────────
+    sync_slop_sec: 0.05
+
+    # ── Preprocessing ─────────────────────────────────────────────────────────
+    # 소규모 씬(~15m)이므로 voxel 0.1m 사용 가능 (기존 0.5m는 260m 씬 overflow 대응용)
+    voxel_size:  0.1
+    min_z:      -1.0    # LiDAR 장착 높이 0.5m 기준 여유
+    max_z:       4.0    # 큐브 상단(2m) + 여유
+    min_range:   1.0
+    max_range:  15.0    # 3m 간격 테스트 — 그 이상은 잡음 차단
+
+    # ── Multi-yaw ICP 초기값 (cube_calibration 실패 fallback 전용) ─────────────
+    # Kabsch SVD 정상 동작 시 이 값은 사용되지 않음.
+    # LiDAR2가 LiDAR1 기준 +X 방향 3m 위치 가정.
+    # 실제 Isaac Sim 세팅에 맞게 수정할 것.
+    init_x:  3.0
+    init_y:  0.0
+    init_z:  0.0
+
+    yaw_candidates: 8
+
+    # ── ICP 파라미터 ──────────────────────────────────────────────────────────
+    # Kabsch 결과가 정확하면 ICP는 소폭 정제만 하면 됨 → 좁은 대응 거리
+    search_correspondence_distance: 2.0   # (기존 general: 3.0  /  15m 배치 기준)
+    refine_correspondence_distance: 0.5   # (기존 general: 1.0)
+
+    max_iterations:            100
+    transformation_epsilon:    1.0e-8
+    euclidean_fitness_epsilon: 1.0e-6
+    fitness_score_threshold:   0.3       # 근거리 고품질 → 엄격하게 (기존: 0.5)
+
+    # ── Sphere Calibration ─────────────────────────────────────────────────────
+    sphere_radius:            0.5
+    sphere_radius_tolerance:  0.1
+    sphere_cluster_tolerance: 0.4
+    sphere_min_cluster_size:  15
+    sphere_max_cluster_size:  3000
+
+    # ── Cube Calibration ──────────────────────────────────────────────────────
+    cube_size_xy:            1.0    # 큐브 수평 변 [m]
+    cube_size_z:             1.0    # 큐브 높이 [m]  (1×1×1m 정육면체)
+    cube_size_tolerance:     0.4    # bbox 허용 오차 [m]
+
+    cube_cluster_tolerance:  0.25   # 클러스터링 거리 [m]
+    #  ↑ 기존 general: 0.40 (차량 프레임 빔 차단 0.30m 간격 대응용)
+    #    3m 테스트 환경은 차체 없음 → 0.25로 줄여 오검출 방지
+
+    cube_min_cluster_size:   10     # 최소 포인트 수 (근거리 → 충분히 많음)
+    cube_max_cluster_size:   3000
+
+    cube_plane_inlier_min:   0.6    # plane RANSAC 최소 inlier 비율
+    #  ↑ 기존 general: 0.5
+    #    근거리 수백 pts → 품질 기준 올려 오검출 방지
+
+    # ★ 핵심 변경: 5.0m → 2.0m
+    # 기존 5.0m = 차체 오검출 방지용. 3m 간격 테스트에서 큐브가 3~8m 거리이므로
+    # 이 값이 5.0m이면 큐브A(4.3m)·큐브B(6.3m)가 전부 '근거리 차체'로 거부됨.
+    cube_min_distance:       2.0    # [m]  (AGV 운용 시: 5.0)
+
+    # ── Output ────────────────────────────────────────────────────────────────
+    output_path: "/tmp/lidar_calib_3m_test.yaml"

@@ -1,0 +1,42 @@
+lidar_calibration_node:
+  ros__parameters:
+
+    # ── Topics ────────────────────────────────────────────────────────────────
+    lidar1_topic: "/point_cloud"    # 전방 LiDAR (기준 / fixed)
+    lidar2_topic: "/point_cloud2"   # 후방 LiDAR (캘리브레이션 대상)
+
+    # ── Frame names ───────────────────────────────────────────────────────────
+    lidar1_frame: "os_sensor"
+    lidar2_frame: "os_sensor2"
+
+    # ── Initial transform guess: lidar2 in lidar1 frame ───────────────────────
+    # AGV 물리적 치수를 참고하여 설정:
+    #   x   : 전방(+)/후방(-) 거리 [m]  → AGV 길이 15 m → -15.0
+    #   y   : 좌(+)/우(-) 오프셋 [m]
+    #   z   : 높이 차이 [m]
+    #   yaw : 후방 라이다가 반대 방향 장착이면 π (≈ 3.14159)
+    init_x:     -15.0
+    init_y:      -3.0   # 전방좌측(+1.5) → 후방우측(-1.5) = -3.0 m
+    init_z:       0.0
+    init_roll:    0.0
+    init_pitch:   0.0
+    init_yaw:     3.14159265   # rad  (π = 180°)
+
+    # ── Point cloud preprocessing ─────────────────────────────────────────────
+    voxel_size:  0.2    # 다운샘플 리프 크기 [m]  (클수록 빠름, 작을수록 정밀)
+    min_z:      -2.0    # 지면 아래 제거 [m]
+    max_z:       5.0    # 상단 절단 높이 [m]
+    min_range:   1.0    # 자기 반사 제거 최소 거리 [m]
+    max_range:  60.0    # 유효 최대 거리 [m]
+
+    # ── ICP parameters ────────────────────────────────────────────────────────
+    # max_correspondence_distance: 초기 추정값 오차보다 충분히 크게 설정
+    max_correspondence_distance: 1.0   # [m]
+    max_iterations:              100
+    transformation_epsilon:      1.0e-8
+    euclidean_fitness_epsilon:   1.0e-6
+    # score < threshold 이면 캘리브레이션 성공으로 판정
+    fitness_score_threshold:     0.5
+
+    # ── Output ────────────────────────────────────────────────────────────────
+    output_path: "/tmp/lidar_calib_result.yaml"
