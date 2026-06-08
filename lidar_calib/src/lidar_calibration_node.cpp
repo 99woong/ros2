@@ -333,83 +333,185 @@ std::vector<CubeTarget> LidarCalibrationNode::detectCubeCenters(const CloudPtr &
   std::vector<CubeTarget> results;
 
   if (cloud->size() < static_cast<size_t>(cube_min_cluster_)) {
+    RCLCPP_WARN(get_logger(),
+      "  입력 pts=%zu < cube_min_cluster(%d) — 클러스터링 생략",
+      cloud->size(), cube_min_cluster_);
     return results;
   }
 
+  // 누적 raw cloud는 프레임×큐브당 수만 pts까지 증가해 cube_max_cluster_size를 초과하므로
+  // 클러스터링 전 0.1m voxelization으로 밀도를 고정 (1m³ 큐브 → 최대 ~1000 pts)
+  CloudPtr cloud_in = std::make_shared<Cloud>();
+  {
+    pcl::VoxelGrid<PointT> vg;
+    vg.setInputCloud(cloud);
+    vg.setLeafSize(0.1f, 0.1f, 0.1f);
+    vg.filter(*cloud_in);
+  }
+  RCLCPP_INFO(get_logger(),
+    "  [전처리] 입력=%zu pts → voxel(0.1m) 후=%zu pts",
+    cloud->size(), cloud_in->size());
+
+  // ── 클라우드 공간 범위 (bbox) ────────────────────────────────────────────────
+  {
+    PointT cmin, cmax;
+    pcl::getMinMax3D(*cloud_in, cmin, cmax);
+    RCLCPP_INFO(get_logger(),
+      "  [클라우드 bbox] x=[%.2f~%.2f]  y=[%.2f~%.2f]  z=[%.2f~%.2f]  (범위 dx=%.2f dy=%.2f dz=%.2f)",
+      cmin.x, cmax.x, cmin.y, cmax.y, cmin.z, cmax.z,
+      cmax.x - cmin.x, cmax.y - cmin.y, cmax.z - cmin.z);
+    if (cmax.z - cmin.z < 0.05f) {
+      RCLCPP_WARN(get_logger(),
+        "  ⚠ z 전체범위=%.3f m — 포인트클라우드가 2D에 가깝습니다"
+        " (센서 좌표계 축 방향 확인 필요)",
+        cmax.z - cmin.z);
+    }
+  }
+
+  // ── Euclidean 클러스터링: PCL max 제한 없이 전체 추출 후 직접 필터링 ────────
+  // PCL은 [min,max] 밖의 클러스터를 조용히 폐기하므로 모두 꺼내서 직접 분류
   pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
-  tree->setInputCloud(cloud);
+  tree->setInputCloud(cloud_in);
 
+  std::vector<pcl::PointIndices> all_clusters;
+  {
+    pcl::EuclideanClusterExtraction<PointT> ec;
+    ec.setClusterTolerance(static_cast<float>(cube_cluster_tol_));
+    ec.setMinClusterSize(1);
+    ec.setMaxClusterSize(static_cast<int>(cloud_in->size()));
+    ec.setSearchMethod(tree);
+    ec.setInputCloud(cloud_in);
+    ec.extract(all_clusters);
+  }
+
+  // ── 클러스터 크기 분포 ────────────────────────────────────────────────────────
+  {
+    int b_tiny = 0, b_small = 0, b_mid = 0, b_large = 0, b_over = 0;
+    for (const auto & idx : all_clusters) {
+      const int n = static_cast<int>(idx.indices.size());
+      if      (n < cube_min_cluster_)  b_tiny++;
+      else if (n < 50)                 b_small++;
+      else if (n < 200)                b_mid++;
+      else if (n <= cube_max_cluster_) b_large++;
+      else                             b_over++;
+    }
+    RCLCPP_INFO(get_logger(),
+      "  [클러스터 크기분포] 전체=%zu개  <min(%d):%d  [%d~50):%d  [50~200):%d"
+      "  [200~max(%d)]:%d  >max:%d",
+      all_clusters.size(),
+      cube_min_cluster_, b_tiny,
+      cube_min_cluster_, b_small,
+      b_mid,
+      cube_max_cluster_, b_large,
+      b_over);
+    if (b_over > 0) {
+      RCLCPP_WARN(get_logger(),
+        "  ⚠ 크기초과 클러스터 %d개 존재 — cube_max_cluster_size(%d) 증가 고려"
+        " 또는 씬에 연결된 대형 구조물 확인",
+        b_over, cube_max_cluster_);
+    }
+  }
+
+  // 크기 범위 내 클러스터만 남김
   std::vector<pcl::PointIndices> clusters;
-  pcl::EuclideanClusterExtraction<PointT> ec;
-  ec.setClusterTolerance(static_cast<float>(cube_cluster_tol_));
-  ec.setMinClusterSize(cube_min_cluster_);
-  ec.setMaxClusterSize(cube_max_cluster_);
-  ec.setSearchMethod(tree);
-  ec.setInputCloud(cloud);
-  ec.extract(clusters);
+  clusters.reserve(all_clusters.size());
+  for (auto & idx : all_clusters) {
+    const int n = static_cast<int>(idx.indices.size());
+    if (n >= cube_min_cluster_ && n <= cube_max_cluster_) {
+      clusters.push_back(std::move(idx));
+    }
+  }
+  RCLCPP_INFO(get_logger(),
+    "  크기필터 통과: %zu개 (cube_min=%d, cube_max=%d)",
+    clusters.size(), cube_min_cluster_, cube_max_cluster_);
 
-  RCLCPP_INFO(get_logger(), "  클러스터 %zu개 검출", clusters.size());
-
-  const float sz  = static_cast<float>(cube_size_z_);
-  const float sxy = static_cast<float>(cube_size_xy_);
-  const float tol = static_cast<float>(cube_size_tolerance_);
+  const float sz   = static_cast<float>(cube_size_z_);
+  const float sxy  = static_cast<float>(cube_size_xy_);
+  const float tol  = static_cast<float>(cube_size_tolerance_);
   const float qmin = static_cast<float>(cube_plane_inlier_thresh_);
+  const float dz_min = sz * 0.2f;
 
-  for (const auto & idx : clusters) {
+  int reject_dz = 0, reject_horiz = 0, reject_dist = 0;
+
+  for (size_t ci = 0; ci < clusters.size(); ++ci) {
     CloudPtr cluster(new Cloud);
     pcl::ExtractIndices<PointT> ext;
-    ext.setInputCloud(cloud);
-    ext.setIndices(std::make_shared<pcl::PointIndices>(idx));
+    ext.setInputCloud(cloud_in);
+    ext.setIndices(std::make_shared<pcl::PointIndices>(clusters[ci]));
     ext.filter(*cluster);
 
-    // ── 바운딩 박스 검사 ──────────────────────────────────────────────────────
+    // ── 바운딩 박스 ──────────────────────────────────────────────────────────
     PointT min_pt, max_pt;
     pcl::getMinMax3D(*cluster, min_pt, max_pt);
     const float dx = max_pt.x - min_pt.x;
     const float dy = max_pt.y - min_pt.y;
     const float dz = max_pt.z - min_pt.z;
-
-    // 모든 클러스터 치수 출력 (진단용)
-    const float dz_min = sz * 0.2f;   // 큐브 높이의 20% 이상이면 허용 (분산 클러스터 대응)
     const float max_horiz = std::max(dx, dy);
-    RCLCPP_INFO(get_logger(),
-      "    [클러스터] pts=%zu  dx=%.2f dy=%.2f dz=%.2f"
-      "  z=[%.2f~%.2f]  허용_dz=[%.2f~%.2f]  허용_xy_max=%.2f",
-      cluster->size(), dx, dy, dz,
-      min_pt.z, max_pt.z,
-      dz_min, sz + tol, sz + tol);
 
-    // 높이: 최소 큐브 높이 50% 이상, 최대 cube_size_z + tolerance
+    Eigen::Vector4f raw_c4;
+    pcl::compute3DCentroid(*cluster, raw_c4);
+    const float dist = raw_c4.head<3>().norm();
+
+    RCLCPP_INFO(get_logger(),
+      "  [클러스터%zu] pts=%zu  bbox dx=%.2f dy=%.2f dz=%.2f"
+      "  z=[%.2f~%.2f]  centroid=(%.2f,%.2f,%.2f)  원점거리=%.2f m",
+      ci, cluster->size(), dx, dy, dz,
+      min_pt.z, max_pt.z,
+      raw_c4.x(), raw_c4.y(), raw_c4.z(), dist);
+
+    // ── 높이 필터 ──────────────────────────────────────────────────────────
     if (dz < dz_min || dz > sz + tol) {
       RCLCPP_INFO(get_logger(),
-        "      → 거부 [높이]: dz=%.2f  기대=[%.2f, %.2f]",
+        "    → 거부 [높이] dz=%.3f  기대=[%.2f, %.2f]",
         dz, dz_min, sz + tol);
+      // dz가 기준 미달이면 z-히스토그램으로 빔 분포 확인
+      if (dz < dz_min) {
+        constexpr int ZBINS = 8;
+        std::array<int, ZBINS> zh = {};
+        const float zrange = (dz > 1e-4f) ? dz : 1e-4f;
+        for (const auto & p : *cluster) {
+          int b = std::min(ZBINS - 1, static_cast<int>((p.z - min_pt.z) / zrange * ZBINS));
+          zh[b]++;
+        }
+        std::string zstr;
+        char buf[64];
+        for (int b = 0; b < ZBINS; ++b) {
+          if (zh[b] == 0) continue;
+          snprintf(buf, sizeof(buf), "[%.2f~%.2f]=%d ",
+            min_pt.z + b * zrange / ZBINS,
+            min_pt.z + (b + 1) * zrange / ZBINS,
+            zh[b]);
+          zstr += buf;
+        }
+        RCLCPP_INFO(get_logger(), "      z-히스토그램: %s", zstr.c_str());
+        RCLCPP_INFO(get_logger(),
+          "      → 단일 LiDAR 빔 링만 맞은 것으로 추정"
+          " (큐브 높이·위치 또는 cube_size_z 파라미터 확인)");
+      }
+      reject_dz++;
       continue;
     }
-    // 수평 최대 범위 > cube_size_z * 1.5 이면 거부 (벽·지면·대형 차체 클러스터 제거)
-    // cube_size_z*1.5 = 3.0m: 큐브의 대각선(≈1.41m)보다 넉넉하게 허용
+
+    // ── 수평 과대 필터 ─────────────────────────────────────────────────────
     const float max_horiz_limit = sz * 1.5f;
     if (max_horiz > max_horiz_limit) {
       RCLCPP_INFO(get_logger(),
-        "      → 거부 [수평 과대]: max(dx,dy)=%.2f  허용 max=%.2f",
+        "    → 거부 [수평과대] max(dx,dy)=%.2f  허용=%.2f",
         max_horiz, max_horiz_limit);
+      reject_horiz++;
       continue;
     }
 
-    // ── 최소 거리 필터: 클러스터 무게중심이 LiDAR 원점에서 너무 가까우면 차체로 판단 ──
-    {
-      Eigen::Vector4f raw_c4;
-      pcl::compute3DCentroid(*cluster, raw_c4);
-      const float dist = raw_c4.head<3>().norm();
-      if (dist < static_cast<float>(cube_min_distance_)) {
-        RCLCPP_INFO(get_logger(),
-          "      → 거부 [근거리 차체]: 무게중심 거리=%.2f m  최소=%.2f m",
-          dist, cube_min_distance_);
-        continue;
-      }
+    // ── 근거리 필터 ─────────────────────────────────────────────────────────
+    if (dist < static_cast<float>(cube_min_distance_)) {
+      RCLCPP_INFO(get_logger(),
+        "    → 거부 [근거리] 원점거리=%.2f m  최소=%.2f m",
+        dist, cube_min_distance_);
+      reject_dist++;
+      continue;
     }
 
-    // ── Plane RANSAC으로 보이는 면 추정 → 큐브 기하 중심 계산 ────────────────
+    // ── Plane RANSAC → 큐브 기하 중심 계산 ──────────────────────────────────
     pcl::SACSegmentation<PointT> seg;
     seg.setModelType(pcl::SACMODEL_PLANE);
     seg.setMethodType(pcl::SAC_RANSAC);
@@ -428,15 +530,11 @@ std::vector<CubeTarget> LidarCalibrationNode::detectCubeCenters(const CloudPtr &
       static_cast<float>(inliers->indices.size()) / cluster->size();
 
     if (coeff->values.size() == 4 && inlier_ratio >= qmin) {
-      // 면 법선 (ax + by + cz + d = 0)
       Eigen::Vector3f n(coeff->values[0], coeff->values[1], coeff->values[2]);
       n.normalize();
       const float d = coeff->values[3];
-
-      // d > 0 이면 n이 LiDAR 원점(0,0,0) 방향을 향함 → 외부 법선
       const Eigen::Vector3f n_out = (d > 0.0f) ? n : -n;
 
-      // inlier 포인트들의 무게중심 = 검출된 면의 중심
       CloudPtr face_cloud(new Cloud);
       pcl::ExtractIndices<PointT> ext2;
       ext2.setInputCloud(cluster);
@@ -447,33 +545,67 @@ std::vector<CubeTarget> LidarCalibrationNode::detectCubeCenters(const CloudPtr &
       pcl::compute3DCentroid(*face_cloud, fc4);
       const Eigen::Vector3f face_center = fc4.head<3>();
 
-      // 큐브 중심 = 면 중심 - (큐브 반폭) × 외부법선
-      // 수평면(Z 법선): 반폭 = cube_size_z / 2, 측면: 반폭 = cube_size_xy / 2
       const float half_depth = (std::abs(n.z()) > 0.7f) ? sz / 2.0f : sxy / 2.0f;
       cube_center = face_center - half_depth * n_out;
       quality = inlier_ratio;
 
       RCLCPP_INFO(get_logger(),
-        "    큐브 검출: center=(%.3f, %.3f, %.3f)  bbox=(%.2f, %.2f, %.2f)"
-        "  inlier=%.0f%%  pts=%zu  원점거리=%.2f m  법선=(%.2f,%.2f,%.2f)",
+        "    → 큐브 검출 center=(%.3f,%.3f,%.3f)  inlier=%.0f%%"
+        "  법선=(%.2f,%.2f,%.2f)",
         cube_center.x(), cube_center.y(), cube_center.z(),
-        dx, dy, dz, inlier_ratio * 100.f, cluster->size(),
-        cube_center.norm(), n_out.x(), n_out.y(), n_out.z());
+        inlier_ratio * 100.f, n_out.x(), n_out.y(), n_out.z());
     } else {
-      // plane fit 실패 → 클러스터 무게중심으로 fallback (정확도 낮음)
       Eigen::Vector4f c4;
       pcl::compute3DCentroid(*cluster, c4);
       cube_center = c4.head<3>();
       quality = 0.0f;
 
       RCLCPP_WARN(get_logger(),
-        "    큐브[%zu pts] plane fit 불안정 (inlier=%.0f%%) → 무게중심 fallback"
-        "  center=(%.3f, %.3f, %.3f)",
-        cluster->size(), inlier_ratio * 100.f,
+        "    → plane fit 불안정 (inlier=%.0f%% < %.0f%%) → 무게중심 fallback"
+        "  center=(%.3f,%.3f,%.3f)",
+        inlier_ratio * 100.f, qmin * 100.f,
         cube_center.x(), cube_center.y(), cube_center.z());
     }
 
     results.push_back({cube_center, cluster, quality});
+  }
+
+  RCLCPP_INFO(get_logger(),
+    "  [필터 요약] 입력클러스터=%zu  통과=%zu  거부: 높이=%d  수평과대=%d  근거리=%d",
+    clusters.size(), results.size(), reject_dz, reject_horiz, reject_dist);
+
+  // ── 검출 실패 시 진단 안내 ──────────────────────────────────────────────────
+  if (results.empty() && !all_clusters.empty()) {
+    const int total = static_cast<int>(all_clusters.size());
+    int n_over = 0;
+    for (const auto & idx : all_clusters) {
+      if (static_cast<int>(idx.indices.size()) > cube_max_cluster_) n_over++;
+    }
+    if (reject_dz > 0) {
+      RCLCPP_WARN(get_logger(),
+        "  ★ 진단: 높이(dz) 거부 %d건 — 큐브가 z축 방향으로 얇게 보임."
+        " [원인 후보] ①큐브 높이/위치 재배치 ②cube_size_z 파라미터 조정"
+        " ③센서 z축 방향 확인",
+        reject_dz);
+    }
+    if (reject_dist > 0) {
+      RCLCPP_WARN(get_logger(),
+        "  ★ 진단: 근거리 거부 %d건 — cube_min_distance=%.1f m 보다 가까운 물체."
+        " 큐브를 더 멀리 배치하거나 파라미터 감소 필요",
+        reject_dist, cube_min_distance_);
+    }
+    if (n_over > 0) {
+      RCLCPP_WARN(get_logger(),
+        "  ★ 진단: 크기초과 클러스터 %d개 (>%d pts) — cube_max_cluster_size 증가"
+        " 또는 voxel_size 조정 필요 (현재 0.1m)",
+        n_over, cube_max_cluster_);
+    }
+    if (reject_dz == 0 && reject_dist == 0 && reject_horiz == 0 && n_over == 0) {
+      RCLCPP_WARN(get_logger(),
+        "  ★ 진단: 크기필터 통과 클러스터 없음 — 전체 %d개 클러스터 모두 min(%d) 미만."
+        " 씬에 큐브가 없거나 min_range/max_range 필터로 제외됐을 수 있음",
+        total, cube_min_cluster_);
+    }
   }
 
   return results;

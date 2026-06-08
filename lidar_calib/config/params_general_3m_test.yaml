@@ -47,8 +47,8 @@ lidar_calibration_node:
     # ── Preprocessing ─────────────────────────────────────────────────────────
     # 소규모 씬(~15m)이므로 voxel 0.1m 사용 가능 (기존 0.5m는 260m 씬 overflow 대응용)
     voxel_size:  0.1
-    min_z:      -1.0    # LiDAR 장착 높이 0.5m 기준 여유
-    max_z:       4.0    # 큐브 상단(2m) + 여유
+    min_z:      -3.0    # Isaac Sim 센서 오프셋 고려 → 큐브 전체 포함
+    max_z:       3.0    # 큐브 상단(+0.5m) + 여유
     min_range:   1.0
     max_range:  15.0    # 3m 간격 테스트 — 그 이상은 잡음 차단
 
@@ -84,16 +84,16 @@ lidar_calibration_node:
     cube_size_z:             1.0    # 큐브 높이 [m]  (1×1×1m 정육면체)
     cube_size_tolerance:     0.4    # bbox 허용 오차 [m]
 
-    cube_cluster_tolerance:  0.25   # 클러스터링 거리 [m]
+    cube_cluster_tolerance:  0.55   # 클러스터링 거리 [m]
     #  ↑ 기존 general: 0.40 (차량 프레임 빔 차단 0.30m 간격 대응용)
-    #    3m 테스트 환경은 차체 없음 → 0.25로 줄여 오검출 방지
+    #    Isaac Sim LiDAR1이 빔 수가 적어 z_spacing ≈ 0.48m → 0.55m으로 링 간 병합 확보
+    #    LiDAR1 센서 numChannels=32 확인 후 0.25m로 복원 권장
 
     cube_min_cluster_size:   10     # 최소 포인트 수 (근거리 → 충분히 많음)
     cube_max_cluster_size:   3000
 
-    cube_plane_inlier_min:   0.6    # plane RANSAC 최소 inlier 비율
-    #  ↑ 기존 general: 0.5
-    #    근거리 수백 pts → 품질 기준 올려 오검출 방지
+    cube_plane_inlier_min:   0.5    # plane RANSAC 최소 inlier 비율
+    #  ↑ 기존 general: 0.5  → LiDAR2 큐브[1]이 56%로 탈락하므로 0.5로 완화
 
     # ★ 핵심 변경: 5.0m → 2.0m
     # 기존 5.0m = 차체 오검출 방지용. 3m 간격 테스트에서 큐브가 3~8m 거리이므로
