@@ -492,6 +492,24 @@ std::vector<CubeTarget> LidarCalibrationNode::detectCubeCenters(const CloudPtr &
       continue;
     }
 
+    // ── 두 번째 큰 치수 필터 (벽·모서리·라인 클러스터 제거) ──────────────────
+    // 큐브 면은 반드시 2개 이상의 축에서 15% cube_size 이상 퍼져야 함
+    // (예: dx=0.00, dy=0.14, dz=0.83 → 두 번째 큰 값=0.14 < 0.15 → 벽·모서리)
+    {
+      float dims[3] = {dx, dy, dz};
+      std::sort(dims, dims + 3);
+      const float second_largest = dims[1];
+      const float min_face_extent = sxy * 0.15f;
+      if (second_largest < min_face_extent) {
+        RCLCPP_INFO(get_logger(),
+          "    → 거부 [라인/벽] 두번째큰치수=%.3f m < %.3f m"
+          "  (dx=%.2f dy=%.2f dz=%.2f) — 벽·모서리·라인 클러스터로 판단",
+          second_largest, min_face_extent, dx, dy, dz);
+        reject_horiz++;
+        continue;
+      }
+    }
+
     // ── 수평 과대 필터 ─────────────────────────────────────────────────────
     const float max_horiz_limit = sz * 1.5f;
     if (max_horiz > max_horiz_limit) {
@@ -554,6 +572,26 @@ std::vector<CubeTarget> LidarCalibrationNode::detectCubeCenters(const CloudPtr &
         "  법선=(%.2f,%.2f,%.2f)",
         cube_center.x(), cube_center.y(), cube_center.z(),
         inlier_ratio * 100.f, n_out.x(), n_out.y(), n_out.z());
+
+      // face_cloud(RANSAC inlier) z 범위·편향 진단:
+      // 빔 커버리지가 불완전하면 centroid z가 실제 면 중심과 달라져 z-translation 오차 유발
+      {
+        PointT fmin, fmax;
+        pcl::getMinMax3D(*face_cloud, fmin, fmax);
+        const float face_z_mid  = (fmin.z + fmax.z) * 0.5f;
+        const float face_z_cov  = (fmax.z - fmin.z) / sz;           // 큐브높이 대비 커버리지
+        const float face_z_bias = face_center.z() - face_z_mid;     // >0: 상향 bias, <0: 하향
+        RCLCPP_INFO(get_logger(),
+          "    → [z진단] face_z=[%.3f~%.3f]  mid=%.3f"
+          "  centroid_z=%.3f  bias=%+.4f m  커버리지=%.0f%%",
+          fmin.z, fmax.z, face_z_mid,
+          face_center.z(), face_z_bias, face_z_cov * 100.f);
+        if (face_z_cov < 0.80f) {
+          RCLCPP_WARN(get_logger(),
+            "    → [z진단] ★ 커버리지 %.0f%% < 80%% — 빔이 큐브 일부만 닿음 → centroid z 불신뢰",
+            face_z_cov * 100.f);
+        }
+      }
     } else {
       Eigen::Vector4f c4;
       pcl::compute3DCentroid(*cluster, c4);
@@ -615,22 +653,28 @@ std::vector<CubeTarget> LidarCalibrationNode::detectCubeCenters(const CloudPtr &
 
 Eigen::Matrix4f LidarCalibrationNode::kabsch(
   const std::vector<Eigen::Vector3f> & src,
-  const std::vector<Eigen::Vector3f> & dst)
+  const std::vector<Eigen::Vector3f> & dst,
+  const std::vector<float> & weights)
 {
   const int N = static_cast<int>(src.size());
+  const bool use_w = (static_cast<int>(weights.size()) == N);
 
+  float w_sum = 0.0f;
   Eigen::Vector3f src_c = Eigen::Vector3f::Zero();
   Eigen::Vector3f dst_c = Eigen::Vector3f::Zero();
   for (int i = 0; i < N; ++i) {
-    src_c += src[i];
-    dst_c += dst[i];
+    const float w = use_w ? weights[i] : 1.0f;
+    src_c += w * src[i];
+    dst_c += w * dst[i];
+    w_sum += w;
   }
-  src_c /= N;
-  dst_c /= N;
+  src_c /= w_sum;
+  dst_c /= w_sum;
 
   Eigen::Matrix3f H = Eigen::Matrix3f::Zero();
   for (int i = 0; i < N; ++i) {
-    H += (src[i] - src_c) * (dst[i] - dst_c).transpose();
+    const float w = use_w ? weights[i] : 1.0f;
+    H += w * (src[i] - src_c) * (dst[i] - dst_c).transpose();
   }
 
   Eigen::JacobiSVD<Eigen::Matrix3f> svd(H, Eigen::ComputeFullU | Eigen::ComputeFullV);
@@ -665,6 +709,7 @@ Eigen::Matrix4f LidarCalibrationNode::matchAndSolve(
 
   Eigen::Matrix4f best_T = Eigen::Matrix4f::Identity();
   best_residual = std::numeric_limits<double>::max();
+  std::vector<int> best_perm(N);
 
   do {
     std::vector<Eigen::Vector3f> src_perm(N);
@@ -674,16 +719,7 @@ Eigen::Matrix4f LidarCalibrationNode::matchAndSolve(
 
     const Eigen::Matrix4f T = kabsch(src_perm, dst);
 
-    // 잔차: 변환된 src 와 dst 사이 평균 거리
     double residual = 0.0;
-    for (int i = 0; i < N; ++i) {
-      Eigen::Vector4f p(src_perm[i].x(), src_perm[i].y(), src_perm[i].z(), 1.0f);
-      residual += (T * p).head<3>().cast<double>()
-                  .squaredNorm() - 2.0 * (T * p).head<3>().cast<double>()
-                  .dot(dst[i].cast<double>()) + dst[i].cast<double>().squaredNorm();
-    }
-    // 단순 거리 합으로 재계산
-    residual = 0.0;
     for (int i = 0; i < N; ++i) {
       Eigen::Vector4f p(src_perm[i].x(), src_perm[i].y(), src_perm[i].z(), 1.0f);
       Eigen::Vector3f transformed = (T * p).head<3>();
@@ -693,8 +729,31 @@ Eigen::Matrix4f LidarCalibrationNode::matchAndSolve(
     if (residual < best_residual) {
       best_residual = residual;
       best_T = T;
+      best_perm = perm;
     }
   } while (std::next_permutation(perm.begin(), perm.end()));
+
+  // 승자 순열 및 각 대응쌍 로그 (잘못된 매칭 진단용)
+  {
+    std::string perm_str;
+    for (int i = 0; i < N; ++i) {
+      char buf[16];
+      snprintf(buf, sizeof(buf), "%d→%d ", best_perm[i], i);
+      perm_str += buf;
+    }
+    RCLCPP_INFO(rclcpp::get_logger("lidar_calibration_node"),
+      "  [Kabsch 순열] %s (src[j]→dst[i])",
+      perm_str.c_str());
+    for (int i = 0; i < N; ++i) {
+      const Eigen::Vector3f & s = src[best_perm[i]];
+      const Eigen::Vector3f & d = dst[i];
+      Eigen::Vector4f p(s.x(), s.y(), s.z(), 1.0f);
+      const float err = ((best_T * p).head<3>() - d).norm();
+      RCLCPP_INFO(rclcpp::get_logger("lidar_calibration_node"),
+        "    [%d] src=(%.3f,%.3f,%.3f) → dst=(%.3f,%.3f,%.3f)  잔차=%.4f m",
+        i, s.x(), s.y(), s.z(), d.x(), d.y(), d.z(), err);
+    }
+  }
 
   return best_T;
 }
@@ -792,14 +851,26 @@ void LidarCalibrationNode::srvCubeCalibrate(
   const std_srvs::srv::Trigger::Request::SharedPtr /*req*/,
   std_srvs::srv::Trigger::Response::SharedPtr res)
 {
-  CloudPtr r1, r2, c1, c2;
+  CloudPtr r1, r2;
   {
     std::lock_guard<std::mutex> lk(cloud_mutex_);
-    // 큐브 검출: 누적 cloud 사용 (단일 프레임보다 큐브 커버리지 훨씬 안정적)
+    // 큐브 검출·ICP 모두 누적 cloud 사용 (단일 프레임은 포인트 수 불안정)
     r1 = accumulated_raw1_;
     r2 = accumulated_raw2_;
-    c1 = cached_cloud1_;
-    c2 = cached_cloud2_;
+  }
+
+  // ICP용 클라우드: 누적 raw를 voxel(0.1m) 다운샘플링
+  // (cached_cloud*는 최근 단일 프레임 → 프레임에 따라 2pts 등 극도로 희박할 수 있음)
+  CloudPtr c1, c2;
+  {
+    pcl::VoxelGrid<PointT> vg;
+    vg.setLeafSize(0.1f, 0.1f, 0.1f);
+    c1 = std::make_shared<Cloud>();
+    vg.setInputCloud(r1);
+    vg.filter(*c1);
+    c2 = std::make_shared<Cloud>();
+    vg.setInputCloud(r2);
+    vg.filter(*c2);
   }
 
   if (!r1 || r1->empty() || !r2 || r2->empty() || !c1 || !c2) {
@@ -1065,7 +1136,110 @@ void LidarCalibrationNode::srvCubeCalibrate(
     return;
   }
 
-  // ── ICP 정제: Kabsch 결과 → coarse → fine ────────────────────────────────
+  // ── Kabsch 결과 물리 타당성 검증 ──────────────────────────────────────────
+  // 지상 차량 캘리브레이션 가정: z 이동·roll·pitch 가 과도하면 spurious 해 의심
+  {
+    double kx, ky, kz, kr, kp, kyaw;
+    matrixToRpy(kabsch_T, kx, ky, kz, kr, kp, kyaw);
+    const double t_xy  = std::sqrt(kx * kx + ky * ky);
+    const double t_z   = std::abs(kz);
+    const double rp_max = std::max(std::abs(kr), std::abs(kp));
+    bool suspicious = false;
+
+    // z 이동이 수평 이동보다 크면 비정상 (센서가 같은 높이에 있어야 함)
+    if (t_z > t_xy + 0.5) {
+      RCLCPP_WARN(get_logger(),
+        "  ★ [Kabsch 타당성] z이동(%.3f m) > xy이동(%.3f m) — "
+        "spurious Ry(π) 해 가능성. 큐브 B·C 배치가 센서 중간점(x=%.1f)에 대해 "
+        "대칭인지 확인하고 비대칭 배치로 수정하세요.",
+        kz, t_xy, (init_x_ * 0.5));
+      suspicious = true;
+    }
+    // roll 또는 pitch 가 크면 비정상
+    if (rp_max > 0.5) {
+      RCLCPP_WARN(get_logger(),
+        "  ★ [Kabsch 타당성] roll=%.3f rad  pitch=%.3f rad — "
+        "지상 차량에서 roll/pitch 과대. 센서 장착 방향 또는 큐브 배치 확인.",
+        kr, kp);
+      suspicious = true;
+    }
+    if (suspicious) {
+      RCLCPP_WARN(get_logger(),
+        "  ★ [Kabsch 타당성] 기대값: x≈%.1f y≈0 z≈0 yaw≈0"
+        " / 실제: x=%.3f y=%.3f z=%.3f yaw=%.3f rad"
+        "  → ICP로 이 초기값을 사용하면 틀린 결과가 나옵니다.",
+        init_x_, kx, ky, kz, kyaw);
+    } else {
+      RCLCPP_INFO(get_logger(),
+        "  [Kabsch 타당성] OK — z이동=%.3f m  roll=%.3f  pitch=%.3f rad",
+        kz, kr, kp);
+    }
+  }
+
+  // ── 지상차량 구속: roll·pitch 소거 → z 직접 계산 ─────────────────────────
+  // 근거: 지상차량에서 LiDAR간 roll·pitch ≈ 0 (물리 가정).
+  // Kabsch roll 원인: 큐브 face centroid z가 beam 커버리지 불균형으로
+  // range-dependent bias를 가짐 → Kabsch가 이를 roll로 해석 →
+  // roll × y_centroid ≈ -0.23m 의 허수 z-translation 발생.
+  // 구속 후: R_fixed=Rot_z(yaw),  t_fixed=mean(dst_i - R_fixed·src_i).
+  // t_fixed.z ≈ mean(Δz_i) 이므로 roll 오염 없이 순수 높이차를 추정.
+  Eigen::Matrix4f icp_init_T = kabsch_T;  // 기본값: Kabsch
+  {
+    double kx, ky, kz, kr, kp, kyaw;
+    matrixToRpy(kabsch_T, kx, ky, kz, kr, kp, kyaw);
+    const double rp_thr = 0.10;  // [rad] ≈ 5.7°
+
+    // per-pair Δz 진단: roll 기여 없이 순수 높이차 확인
+    float dz_sum = 0.0f, yc_sum = 0.0f;
+    RCLCPP_INFO(get_logger(), "  [z진단] 각 쌍 Δz=dst_z−src_z (roll 미포함, 순수 높이차):");
+    for (size_t i = 0; i < n; ++i) {
+      const float dz = centers1[i].z() - centers2[i].z();
+      dz_sum += dz;
+      yc_sum += centers2[i].y();
+      RCLCPP_INFO(get_logger(),
+        "    [쌍%zu] src_z=%.3f → dst_z=%.3f  Δz=%+.4f m",
+        i, centers2[i].z(), centers1[i].z(), static_cast<double>(dz));
+    }
+    const float dz_mean = dz_sum / static_cast<float>(n);
+    const float yc_mean = yc_sum / static_cast<float>(n);
+    RCLCPP_INFO(get_logger(),
+      "    Δz 평균=%+.4f m | roll=%.3f rad × y중심=%.2f m → z오염≈%.3f m | Kabsch z=%.3f m",
+      static_cast<double>(dz_mean), kr, static_cast<double>(yc_mean),
+      static_cast<double>(-static_cast<float>(kr) * yc_mean), kz);
+
+    if (std::abs(kr) < rp_thr && std::abs(kp) < rp_thr) {
+      // yaw만 남긴 순수 회전 행렬
+      const float cy = std::cos(static_cast<float>(kyaw));
+      const float sy = std::sin(static_cast<float>(kyaw));
+      Eigen::Matrix4f R_yaw = Eigen::Matrix4f::Identity();
+      R_yaw(0, 0) =  cy;  R_yaw(0, 1) = -sy;
+      R_yaw(1, 0) =  sy;  R_yaw(1, 1) =  cy;
+
+      // 각 쌍의 t_i = dst_i - R_yaw * src_i → 평균 = 순수 translation (z오염 없음)
+      Eigen::Vector3f t_mean = Eigen::Vector3f::Zero();
+      for (size_t i = 0; i < n; ++i) {
+        Eigen::Vector4f sp(centers2[i].x(), centers2[i].y(), centers2[i].z(), 1.0f);
+        t_mean += centers1[i] - (R_yaw * sp).head<3>();
+      }
+      t_mean /= static_cast<float>(n);
+
+      icp_init_T = R_yaw;
+      icp_init_T.block<3, 1>(0, 3) = t_mean;
+
+      double gx, gy, gz, gr, gp, gyaw2;
+      matrixToRpy(icp_init_T, gx, gy, gz, gr, gp, gyaw2);
+      RCLCPP_INFO(get_logger(),
+        "  [지상구속] 적용: x=%.3f y=%.3f z=%.3f yaw=%.4f rad"
+        "  (Kabsch z=%.3f → 개선 Δ=%.3f m)",
+        gx, gy, gz, gyaw2, kz, gz - kz);
+    } else {
+      RCLCPP_INFO(get_logger(),
+        "  [지상구속] 미적용 — roll=%.3f pitch=%.3f rad (임계값 %.2f rad 초과)",
+        kr, kp, rp_thr);
+    }
+  }
+
+  // ── ICP 정제: 지상구속 결과 → coarse → fine ──────────────────────────────
   RCLCPP_INFO(get_logger(),
     "ICP 정제 시작 (c1=%zu pts  c2=%zu pts  coarse_corr=%.2f m  fine_corr=%.2f m)...",
     c1->size(), c2->size(), search_corr_dist_, refine_corr_dist_);
@@ -1073,13 +1247,13 @@ void LidarCalibrationNode::srvCubeCalibrate(
   Eigen::Matrix4f coarse_T;
   double coarse_score;
   const bool coarse_ok =
-    runICP(c2, c1, kabsch_T, coarse_T, coarse_score, search_corr_dist_);
+    runICP(c2, c1, icp_init_T, coarse_T, coarse_score, search_corr_dist_);
 
   if (coarse_ok) {
     RCLCPP_INFO(get_logger(), "  coarse ICP score=%.4f", coarse_score);
   } else {
-    RCLCPP_WARN(get_logger(), "  coarse ICP 수렴 실패 → Kabsch 결과로 fine ICP 재시도");
-    coarse_T     = kabsch_T;
+    RCLCPP_WARN(get_logger(), "  coarse ICP 수렴 실패 → 지상구속 결과로 fine ICP 재시도");
+    coarse_T     = icp_init_T;
     coarse_score = residual_per_cube;
   }
 
@@ -1096,21 +1270,31 @@ void LidarCalibrationNode::srvCubeCalibrate(
     fine_score = coarse_score;
   }
 
-  // Kabsch → fine ICP drift 진단
+  // Kabsch → fine ICP drift 진단 + drift guard
+  // 누적 클라우드(3개 큐브 클러스터)로 ICP를 돌리면 서로 다른 큐브 면끼리
+  // 잘못 대응하여 국소 최솟값에 빠질 수 있음 → drift가 크면 Kabsch 결과 사용
   {
-    const Eigen::Vector3f t_kabsch = kabsch_T.block<3, 1>(0, 3);
-    const Eigen::Vector3f t_fine   = fine_T.block<3, 1>(0, 3);
-    const float drift = (t_fine - t_kabsch).norm();
+    const float drift_limit = 0.15f;  // [m]
+    const Eigen::Vector3f t_init = icp_init_T.block<3, 1>(0, 3);
+    const Eigen::Vector3f t_fine = fine_T.block<3, 1>(0, 3);
+    const float drift = (t_fine - t_init).norm();
     RCLCPP_INFO(get_logger(),
-      "  [drift] Kabsch=(%.4f, %.4f, %.4f)  fine=(%.4f, %.4f, %.4f)  이동=%.4f m",
-      t_kabsch.x(), t_kabsch.y(), t_kabsch.z(),
+      "  [drift] init=(%.4f, %.4f, %.4f)  fine=(%.4f, %.4f, %.4f)  이동=%.4f m",
+      t_init.x(), t_init.y(), t_init.z(),
       t_fine.x(), t_fine.y(), t_fine.z(), drift);
+    if (drift > drift_limit) {
+      RCLCPP_WARN(get_logger(),
+        "  ★ ICP drift=%.3f m > %.3f m — 잘못된 면 대응 수렴 추정 → 지상구속 결과 사용",
+        drift, drift_limit);
+      fine_T     = icp_init_T;
+      fine_score = residual_per_cube;
+    }
   }
 
-  // ICP가 모두 실패했으면 Kabsch 결과만으로 저장
+  // ICP가 모두 실패했으면 지상구속 결과로 저장
   if (!coarse_ok && !fine_ok) {
-    RCLCPP_WARN(get_logger(), "  ICP 전체 실패 → Kabsch 결과로 저장");
-    current_T_     = kabsch_T;
+    RCLCPP_WARN(get_logger(), "  ICP 전체 실패 → 지상구속 결과로 저장");
+    current_T_     = icp_init_T;
     current_score_ = residual_per_cube;
     icp_done_      = true;
     broadcastTransform(current_T_);

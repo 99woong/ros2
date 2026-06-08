@@ -84,10 +84,11 @@ private:
   // 큐브 클러스터 검출 → plane RANSAC으로 기하 중심 추정
   std::vector<CubeTarget> detectCubeCenters(const CloudPtr & cloud);
 
-  // Kabsch SVD: T 를 구해 T * src[i] ≈ dst[i] 를 만족
+  // Kabsch SVD: T 를 구해 T * src[i] ≈ dst[i] 를 만족 (weights 비어있으면 균등)
   static Eigen::Matrix4f kabsch(
     const std::vector<Eigen::Vector3f> & src,
-    const std::vector<Eigen::Vector3f> & dst);
+    const std::vector<Eigen::Vector3f> & dst,
+    const std::vector<float> & weights = {});
 
   // src 순열 전수 탐색 → 잔차 최소 T 반환
   static Eigen::Matrix4f matchAndSolve(
