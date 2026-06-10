@@ -43,9 +43,11 @@ using SyncPolicy = message_filters::sync_policies::ApproximateTime<
   sensor_msgs::msg::PointCloud2>;
 
 struct CubeTarget {
-  Eigen::Vector3f center;   // plane RANSAC으로 추정한 큐브 기하 중심
-  CloudPtr        cloud;    // 클러스터 포인트 클라우드
-  float           quality;  // plane inlier 비율 (0.0 = centroid fallback)
+  Eigen::Vector3f center;         // plane RANSAC으로 추정한 큐브 기하 중심
+  CloudPtr        cloud;          // 클러스터 포인트 클라우드
+  float           quality;        // plane inlier 비율 (0.0 = centroid fallback)
+  float           face_z_min{0.f}; // RANSAC inlier face z 최솟값 (커버리지 보정용)
+  float           face_z_max{0.f}; // RANSAC inlier face z 최댓값
 };
 
 class LidarCalibrationNode : public rclcpp::Node
@@ -90,11 +92,12 @@ private:
     const std::vector<Eigen::Vector3f> & dst,
     const std::vector<float> & weights = {});
 
-  // src 순열 전수 탐색 → 잔차 최소 T 반환
+  // src 순열 전수 탐색 → 잔차 최소 T 반환 (out_perm != nullptr 이면 최적 순열 출력)
   static Eigen::Matrix4f matchAndSolve(
     const std::vector<Eigen::Vector3f> & src,
     const std::vector<Eigen::Vector3f> & dst,
-    double & residual);
+    double & residual,
+    std::vector<int> * out_perm = nullptr);
 
   // ── Output helpers ─────────────────────────────────────────────────────────
   void broadcastTransform(const Eigen::Matrix4f & T);
@@ -166,6 +169,7 @@ private:
   int    cube_max_cluster_;
   double cube_plane_inlier_thresh_;
   double cube_min_distance_;    // 클러스터 무게중심이 이 거리 이상이어야 큐브로 인정
+  double cube_detection_voxel_size_;
 
   double sync_slop_sec_;
   std::string output_path_;
