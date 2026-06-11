@@ -5,25 +5,14 @@ lidar_calibration_node:
     lidar_mode: "ouster"    # 실차 ouster_ros 드라이버
 
     # ── Topics ────────────────────────────────────────────────────────────────
-    # ouster_ros 드라이버를 두 개 인스턴스로 기동할 때의 기본 토픽.
-    # 실제 네임스페이스에 맞게 수정하세요.
-    #   예) 전방: ros2 run ouster_ros driver --ros-args -r points:=/ouster1/points
-    #       후방: ros2 run ouster_ros driver --ros-args -r points:=/ouster2/points
     lidar1_topic: "/ouster1/points"   # 전방 LiDAR (기준)
     lidar2_topic: "/ouster2/points"   # 후방 LiDAR (교정 대상)
 
     # ── Frame names ───────────────────────────────────────────────────────────
-    # ouster_ros 드라이버 기본 프레임 ID
     lidar1_frame: "os_sensor"
     lidar2_frame: "os_sensor2"
 
     # ── Time sync ─────────────────────────────────────────────────────────────
-    # PTP(IEEE 1588) 하드웨어 동기화 환경에서는 두 클라우드의 타임스탬프 차이가
-    # 수 μs 이내로 유지됨. ApproximateTime slop 을 10 ms 로 좁혀 정밀 매칭.
-    #
-    # ※ ExactTime 은 사용 불가:
-    #   두 센서가 독립적으로 스캔을 시작하기 때문에 나노초 단위 타임스탬프가
-    #   절대 일치하지 않음. PTP 환경에서도 ApproximateTime 이 올바른 선택.
     sync_slop_sec: 0.01    # PTP 환경 권장값 (10 ms)
 
     # ── Initial transform guess: lidar2 in lidar1 frame ───────────────────────
@@ -34,21 +23,71 @@ lidar_calibration_node:
     yaw_candidates: 8
 
     # ── Preprocessing ─────────────────────────────────────────────────────────
-    # ouster 드라이버는 유효 범위 밖 포인트를 NaN 으로 채울 수 있음.
-    # 노드 내부에서 pcl::removeNaNFromPointCloud 를 자동 적용함.
     voxel_size:  0.2
     min_z:      -2.0
     max_z:       5.0
-    min_range:   1.5    # ouster 자기반사 제거 (실차 지면반사 포함)
+    min_range:   1.5
     max_range:  60.0
 
     # ── ICP ───────────────────────────────────────────────────────────────────
-    search_correspondence_distance: 6.0   # 조합 탐색 시 초기 오차 여유
-    refine_correspondence_distance: 1.0
-    max_iterations:              100
+    # search_correspondence_distance: 센서 이격 15m 환경에서 Kabsch 초기값 오차(~1m) +
+    # 포인트 밀도 차이를 흡수하기 위해 크게 설정. refine 단계에서 정밀 수렴.
+    search_correspondence_distance: 3.0
+    refine_correspondence_distance: 0.5
+    max_iterations:              200
     transformation_epsilon:      1.0e-8
     euclidean_fitness_epsilon:   1.0e-6
-    fitness_score_threshold:     0.3   # 실차 환경은 더 엄격하게
+    fitness_score_threshold:     0.5
+
+    # ── Sphere Calibration ────────────────────────────────────────────────────
+    # OS1-32 수직 빔 간격: 1.45°/빔 → 거리 d에서 0.0253*d m
+    # 15m 이격 환경에서 타겟이 원거리 센서로부터 최대 ~25m 관측됨
+    # 수직 간격 최대 25*0.0253=0.63m → cluster_tolerance ≥ 0.65m
+    sphere_radius:            0.5
+    sphere_radius_tolerance:  0.1
+    sphere_cluster_tolerance: 0.65   # OS1-32 25m 관측 대응 (기본값 0.40m → 부족)
+    sphere_min_cluster_size:  10
+    sphere_max_cluster_size:  3000
+    # 실차는 대용량 cloud → 구 검출 전에 voxelization 필요.
+    # 0.05m 사용: OS1-32 @15m 링 간격 0.38m → 0.05m voxel에서 충분한 pts/링 유지.
+    sphere_detection_voxel_size: 0.05
+
+    # ── Cube Calibration ──────────────────────────────────────────────────────
+    # cube_cluster_tolerance 산정:
+    #   센서 이격 15m, 타겟 근접센서 기준 5m → 원거리 센서 기준 최대 20m
+    #   OS1-32 @20m 수직 빔 간격 = 20*0.0253 = 0.506m → tolerance ≥ 0.55m
+    #   여유 포함 0.65m 설정 (최대 관측 25m 커버)
+    cube_size_xy:             1.0
+    cube_size_z:              2.0
+    cube_size_tolerance:      0.5
+    cube_cluster_tolerance:   0.65   # OS1-32 25m 관측 대응 (기본값 0.25m → 10m 이상 실패)
+    cube_min_cluster_size:    5
+    cube_max_cluster_size:    3000
+    cube_plane_inlier_min:    0.4
+    cube_min_distance:        3.0    # 최소 거리 낮춤: 15m 이격시 근접 타겟 수용
+    cube_detection_voxel_size: 0.05  # 0.02m는 누적cloud 과부하, 0.05m로 균형
+
+    # ── Panel Calibration (대형 평면 패널, AGV 한쪽 측면 배치) ──────────────────
+    # 배치 전제: 1.5m×1.5m 패널 3개를 AGV +Y 측면(한쪽)에 배치
+    # → L1(0,0,5)과 L2(-15,-3,5) 모두 동일한 면을 관측
+    # 패널 거리: L1에서 6~12m, L2에서 7~13m → 빔 간격 ~180~330mm
+    # cluster_tolerance: 최대 빔 간격(330mm) + 여유 = 0.40m
+    panel_size:               1.5    # 패널 한 변 길이 [m]
+    panel_size_tolerance:     0.35   # 크기 허용오차 [m] (장거리에서 bbox 일부만 보임)
+    panel_cluster_tolerance:  0.40   # OS1-32 13m 빔간격 ~330mm → 0.40m
+    panel_min_cluster_size:   8
+    panel_max_cluster_size:   3000
+    panel_plane_inlier_min:   0.65   # 평면 패널: 높은 평면성 요구
+    panel_min_distance:       3.0
+    panel_detection_voxel_size: 0.05
+
+    # ── Corner Calibration ────────────────────────────────────────────────────
+    corner_cluster_tolerance: 0.65   # OS1-32 25m 관측 대응 (기본값 0.25m → 10m 이상 실패)
+    corner_min_cluster_size:  15
+    corner_max_cluster_size:  3000
+    corner_plane_inlier_min:  0.30
+    corner_min_distance:      2.0
+    corner_perp_threshold:    0.20
 
     # ── Output ────────────────────────────────────────────────────────────────
     output_path: "/tmp/lidar_calib_result.yaml"

@@ -64,6 +64,20 @@ LidarCalibrationNode::LidarCalibrationNode(const rclcpp::NodeOptions & options)
   declare_parameter("cube_min_distance",      5.0);
   declare_parameter("cube_detection_voxel_size", 0.02);
 
+  declare_parameter("panel_size",               1.5);
+  declare_parameter("panel_size_tolerance",     0.3);
+  declare_parameter("panel_cluster_tolerance",  0.45);
+  declare_parameter("panel_min_cluster_size",   10);
+  declare_parameter("panel_max_cluster_size",   3000);
+  declare_parameter("panel_plane_inlier_min",   0.65);
+  declare_parameter("panel_min_distance",       3.0);
+  declare_parameter("panel_detection_voxel_size", 0.05);
+
+  // sphere_detection_voxel_size: 구 검출 전용 voxel 크기
+  //   0.0  = voxelization 없음 (Isaac Sim 정적 씬 권장: repeated hits 보존 → 모든 링 형성)
+  //   >0.0 = voxel 크기 [m] (대용량 실차 cloud에서 성능 제한 필요 시)
+  declare_parameter("sphere_detection_voxel_size", 0.0);
+
   declare_parameter("sync_slop_sec", is_ouster ? 0.01 : 0.05);
   declare_parameter("output_path", "/tmp/lidar_calib_result.yaml");
 
@@ -101,6 +115,16 @@ LidarCalibrationNode::LidarCalibrationNode(const rclcpp::NodeOptions & options)
   cube_plane_inlier_thresh_      = get_parameter("cube_plane_inlier_min").as_double();
   cube_min_distance_             = get_parameter("cube_min_distance").as_double();
   cube_detection_voxel_size_     = get_parameter("cube_detection_voxel_size").as_double();
+  sphere_detection_voxel_size_   = get_parameter("sphere_detection_voxel_size").as_double();
+
+  panel_size_                 = get_parameter("panel_size").as_double();
+  panel_size_tol_             = get_parameter("panel_size_tolerance").as_double();
+  panel_cluster_tol_          = get_parameter("panel_cluster_tolerance").as_double();
+  panel_min_cluster_          = get_parameter("panel_min_cluster_size").as_int();
+  panel_max_cluster_          = get_parameter("panel_max_cluster_size").as_int();
+  panel_plane_inlier_thresh_  = get_parameter("panel_plane_inlier_min").as_double();
+  panel_min_distance_         = get_parameter("panel_min_distance").as_double();
+  panel_detection_voxel_size_ = get_parameter("panel_detection_voxel_size").as_double();
 
   sync_slop_sec_ = get_parameter("sync_slop_sec").as_double();
   output_path_   = get_parameter("output_path").as_string();
@@ -128,6 +152,11 @@ LidarCalibrationNode::LidarCalibrationNode(const rclcpp::NodeOptions & options)
     std::bind(&LidarCalibrationNode::srvCubeCalibrate, this,
       std::placeholders::_1, std::placeholders::_2));
 
+  srv_plane_calib_ = create_service<std_srvs::srv::Trigger>(
+    "/lidar_calib/plane_calibration",
+    std::bind(&LidarCalibrationNode::srvPlaneCalibrate, this,
+      std::placeholders::_1, std::placeholders::_2));
+
   srv_save_ = create_service<std_srvs::srv::Trigger>(
     "/lidar_calib/save_calibration",
     std::bind(&LidarCalibrationNode::srvSave, this,
@@ -151,6 +180,7 @@ LidarCalibrationNode::LidarCalibrationNode(const rclcpp::NodeOptions & options)
   RCLCPP_INFO(get_logger(), "  lidar1 : %s  frame=%s", t1.c_str(), lidar1_frame_.c_str());
   RCLCPP_INFO(get_logger(), "  lidar2 : %s  frame=%s", t2.c_str(), lidar2_frame_.c_str());
   RCLCPP_INFO(get_logger(), "  services:");
+  RCLCPP_INFO(get_logger(), "    /lidar_calib/plane_calibration   — 대형 평면 패널 SVD (15m 이격 권장) ★★");
   RCLCPP_INFO(get_logger(), "    /lidar_calib/cube_calibration    — 큐브 Kabsch SVD + ICP (초기값 불필요) ★");
   RCLCPP_INFO(get_logger(), "    /lidar_calib/sphere_calibration  — 구 기반 SVD (초기값 불필요)");
   RCLCPP_INFO(get_logger(), "    /lidar_calib/run_calibration     — 다중 yaw ICP");
@@ -172,9 +202,19 @@ void LidarCalibrationNode::cloudCallback(
   CloudPtr r1 = preprocessCloud(msg1, -1.0);
   CloudPtr r2 = preprocessCloud(msg2, -1.0);
 
+  // raw 메시지 크기 진단 (10초마다)
+  RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 10000,
+    "[raw msg] msg1: %u pts  msg2: %u pts  → 전처리후 c1: %zu  c2: %zu",
+    msg1->width * msg1->height, msg2->width * msg2->height,
+    c1->size(), c2->size());
+
   if (c1->empty() || c2->empty()) {
     RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000,
-      "전처리 후 포인트 클라우드가 비어 있습니다.");
+      "전처리 후 포인트 클라우드 비어 있음"
+      "  [raw] msg1=%u pts  msg2=%u pts"
+      "  [z범위] %.1f~%.1f m  [거리범위] %.1f~%.1f m",
+      msg1->width * msg1->height, msg2->width * msg2->height,
+      min_z_, max_z_, min_range_, max_range_);
     return;
   }
 
@@ -225,12 +265,18 @@ CloudPtr LidarCalibrationNode::preprocessCloud(
 {
   CloudPtr cloud = std::make_shared<Cloud>();
   pcl::fromROSMsg(*msg, *cloud);
+  const size_t n_raw = cloud->size();
+
+  if (n_raw == 0) {
+    return cloud;   // 빈 메시지 — 진단은 cloudCallback에서 처리
+  }
 
   {
     std::vector<int> dummy;
     cloud->is_dense = false;
     pcl::removeNaNFromPointCloud(*cloud, *cloud, dummy);
   }
+  const size_t n_nan = cloud->size();
 
   {
     pcl::PassThrough<PointT> pass;
@@ -239,6 +285,7 @@ CloudPtr LidarCalibrationNode::preprocessCloud(
     pass.setFilterLimits(static_cast<float>(min_z_), static_cast<float>(max_z_));
     pass.filter(*cloud);
   }
+  const size_t n_z = cloud->size();
 
   {
     CloudPtr in_range = std::make_shared<Cloud>();
@@ -254,12 +301,31 @@ CloudPtr LidarCalibrationNode::preprocessCloud(
     cloud = in_range;
   }
 
+  const size_t n_range = cloud->size();
+
   if (voxel_size > 0.0) {
     pcl::VoxelGrid<PointT> vg;
     vg.setInputCloud(cloud);
     const float leaf = static_cast<float>(voxel_size);
     vg.setLeafSize(leaf, leaf, leaf);
     vg.filter(*cloud);
+  }
+  const size_t n_final = cloud->size();
+
+  // 최종 결과가 비었으면 어느 단계에서 제거됐는지 경고
+  if (n_final == 0 && n_raw > 0) {
+    RCLCPP_WARN_THROTTLE(
+      get_logger(), *get_clock(), 5000,
+      "[전처리 진단] raw=%zu → NaN제거=%zu → z필터[%.1f,%.1f]=%zu"
+      " → 거리필터[%.1f,%.1f]=%zu → voxel=0"
+      "  ★ %s 단계에서 전체 제거됨",
+      n_raw, n_nan,
+      min_z_, max_z_, n_z,
+      min_range_, max_range_, n_range,
+      (n_nan == 0) ? "NaN제거" :
+      (n_z   == 0) ? "z필터 (min_z/max_z 파라미터 확인)" :
+      (n_range==0) ? "거리필터 (min_range/max_range 파라미터 확인)" :
+                     "voxelGrid");
   }
 
   return cloud;
@@ -290,12 +356,27 @@ std::vector<Eigen::Vector3f> LidarCalibrationNode::detectSpheres(const CloudPtr 
 
   RCLCPP_INFO(get_logger(), "  클러스터 %zu개 검출", clusters.size());
 
+  size_t cl_idx = 0;
   for (const auto & idx : clusters) {
+    ++cl_idx;
     CloudPtr cluster(new Cloud);
     pcl::ExtractIndices<PointT> ext;
     ext.setInputCloud(cloud);
     ext.setIndices(std::make_shared<pcl::PointIndices>(idx));
     ext.filter(*cluster);
+
+    // 클러스터 정보 (centroid, bbox) — 진단 및 ring fallback 공용
+    Eigen::Vector4f c_cen;
+    pcl::compute3DCentroid(*cluster, c_cen);
+    PointT bb_min, bb_max;
+    pcl::getMinMax3D(*cluster, bb_min, bb_max);
+    const float z_span = bb_max.z - bb_min.z;
+    RCLCPP_INFO(get_logger(),
+      "  [클러스터%zu] pts=%zu  centroid=(%.2f,%.2f,%.2f)"
+      "  bbox dx=%.2f dy=%.2f dz=%.2f",
+      cl_idx, cluster->size(),
+      c_cen[0], c_cen[1], c_cen[2],
+      bb_max.x - bb_min.x, bb_max.y - bb_min.y, z_span);
 
     // RANSAC sphere fitting
     pcl::SACSegmentation<PointT> seg;
@@ -322,6 +403,75 @@ std::vector<Eigen::Vector3f> LidarCalibrationNode::detectSpheres(const CloudPtr 
       RCLCPP_INFO(get_logger(),
         "    구 검출: center=(%.3f, %.3f, %.3f)  r=%.3f  inlier=%.0f%%",
         c.x(), c.y(), c.z(), coeff->values[3], inlier_ratio * 100.f);
+    } else {
+      // 진단: RANSAC 실패 이유 출력
+      if (coeff->values.size() < 4) {
+        RCLCPP_INFO(get_logger(),
+          "    → RANSAC 수렴 실패 (pts=%zu, 동일 평면 배치 의심)",
+          cluster->size());
+      } else {
+        RCLCPP_INFO(get_logger(),
+          "    → 구 거부: r=%.3f 범위[%.2f,%.2f]  inlier=%.0f%%"
+          "  fitted_center=(%.2f,%.2f,%.2f)",
+          coeff->values[3],
+          sphere_radius_ - sphere_radius_tol_,
+          sphere_radius_ + sphere_radius_tol_,
+          inlier_ratio * 100.f,
+          coeff->values[0], coeff->values[1], coeff->values[2]);
+      }
+
+      // Ring/Face fallback: 수직 빔 수가 적을 때 3D RANSAC이 퇴화함.
+      // z_span ≤ sphere_radius+tol 이면 링/정면 패치 클러스터로 판단.
+      if (z_span <= sphere_radius_ + sphere_radius_tol_) {
+        float r2d_sum = 0.0f;
+        for (const auto & pt : *cluster) {
+          const float dx = pt.x - c_cen[0];
+          const float dy = pt.y - c_cen[1];
+          r2d_sum += std::sqrt(dx * dx + dy * dy);
+        }
+        const float r2d = r2d_sum / static_cast<float>(cluster->size());
+        const float r_lo = sphere_radius_ * 0.5f;
+        const float r_hi = sphere_radius_ + sphere_radius_tol_;
+
+        if (r2d >= r_lo && r2d <= r_hi) {
+          // Ring fallback: 적도~위도60° 링. centroid.z ≈ sphere_center.z
+          const Eigen::Vector3f c(c_cen[0], c_cen[1], c_cen[2]);
+          centers.push_back(c);
+          RCLCPP_INFO(get_logger(),
+            "    구 검출 [ring fallback]: center=(%.3f,%.3f,%.3f)"
+            "  r2d=%.3f  z_span=%.3f",
+            c.x(), c.y(), c.z(), r2d, z_span);
+        } else if (r2d < r_lo) {
+          // Face fallback: 원거리 구의 정면 패치 관측.
+          // centroid ≈ 구의 근접면 중심 → 구 중심 = centroid + r×LOS_unit
+          const float bbox_limit = (sphere_radius_ + sphere_radius_tol_) * 2.0f;
+          const float dx_bb = bb_max.x - bb_min.x;
+          const float dy_bb = bb_max.y - bb_min.y;
+          const float dist3d = std::sqrt(
+            c_cen[0] * c_cen[0] + c_cen[1] * c_cen[1] + c_cen[2] * c_cen[2]);
+
+          if (dx_bb <= bbox_limit && dy_bb <= bbox_limit && dist3d > sphere_radius_) {
+            const float inv = sphere_radius_ / dist3d;
+            const Eigen::Vector3f sphere_c(
+              c_cen[0] * (1.0f + inv),
+              c_cen[1] * (1.0f + inv),
+              c_cen[2] * (1.0f + inv));
+            centers.push_back(sphere_c);
+            RCLCPP_INFO(get_logger(),
+              "    구 검출 [face fallback]: center=(%.3f,%.3f,%.3f)"
+              "  r2d=%.3f  z_span=%.3f  (centroid→LOS 보정 +%.3fm)",
+              sphere_c.x(), sphere_c.y(), sphere_c.z(), r2d, z_span, sphere_radius_);
+          } else {
+            RCLCPP_INFO(get_logger(),
+              "    → face fallback 거부: bbox(%.2f,%.2f) 또는 dist %.2f",
+              dx_bb, dy_bb, dist3d);
+          }
+        } else {
+          RCLCPP_INFO(get_logger(),
+            "    → ring fallback 거부: r2d=%.3f 범위[%.2f,%.2f]",
+            r2d, r_lo, r_hi);
+        }
+      }
     }
   }
 
@@ -682,6 +832,459 @@ std::vector<CubeTarget> LidarCalibrationNode::detectCubeCenters(const CloudPtr &
   return results;
 }
 
+// ──────────────────────────── Panel detection (plane RANSAC) ─────────────────
+// 대형 평면 패널(panel_size × panel_size)을 클러스터링 + RANSAC으로 검출.
+// 법선은 항상 센서 원점 방향으로 flip하여 두 센서 간 법선 방향을 통일.
+
+std::vector<PanelTarget> LidarCalibrationNode::detectPanels(const CloudPtr & cloud)
+{
+  std::vector<PanelTarget> results;
+
+  if (cloud->size() < static_cast<size_t>(panel_min_cluster_)) {
+    RCLCPP_WARN(get_logger(),
+      "  입력 pts=%zu < panel_min_cluster(%d) — 클러스터링 생략",
+      cloud->size(), panel_min_cluster_);
+    return results;
+  }
+
+  CloudPtr cloud_in = std::make_shared<Cloud>();
+  {
+    pcl::VoxelGrid<PointT> vg;
+    vg.setInputCloud(cloud);
+    const float leaf = static_cast<float>(panel_detection_voxel_size_);
+    vg.setLeafSize(leaf, leaf, leaf);
+    vg.filter(*cloud_in);
+  }
+  RCLCPP_INFO(get_logger(),
+    "  [전처리] 입력=%zu pts → voxel(%.2fm) 후=%zu pts",
+    cloud->size(), panel_detection_voxel_size_, cloud_in->size());
+
+  pcl::search::KdTree<PointT>::Ptr tree(new pcl::search::KdTree<PointT>);
+  tree->setInputCloud(cloud_in);
+
+  std::vector<pcl::PointIndices> all_clusters;
+  {
+    pcl::EuclideanClusterExtraction<PointT> ec;
+    ec.setClusterTolerance(static_cast<float>(panel_cluster_tol_));
+    ec.setMinClusterSize(1);
+    ec.setMaxClusterSize(static_cast<int>(cloud_in->size()));
+    ec.setSearchMethod(tree);
+    ec.setInputCloud(cloud_in);
+    ec.extract(all_clusters);
+  }
+  RCLCPP_INFO(get_logger(), "  클러스터 총 %zu개 검출", all_clusters.size());
+
+  const float sz  = static_cast<float>(panel_size_);
+  const float tol = static_cast<float>(panel_size_tol_);
+  int reject_size = 0, reject_dist = 0, reject_plane = 0, reject_flat = 0;
+
+  for (size_t ci = 0; ci < all_clusters.size(); ++ci) {
+    const int n = static_cast<int>(all_clusters[ci].indices.size());
+    if (n < panel_min_cluster_ || n > panel_max_cluster_) continue;
+
+    CloudPtr cluster = std::make_shared<Cloud>();
+    {
+      pcl::ExtractIndices<PointT> ext;
+      ext.setInputCloud(cloud_in);
+      ext.setIndices(std::make_shared<pcl::PointIndices>(all_clusters[ci]));
+      ext.filter(*cluster);
+    }
+
+    PointT min_pt, max_pt;
+    pcl::getMinMax3D(*cluster, min_pt, max_pt);
+    const float dx = max_pt.x - min_pt.x;
+    const float dy = max_pt.y - min_pt.y;
+    const float dz = max_pt.z - min_pt.z;
+
+    Eigen::Vector4f raw_c4;
+    pcl::compute3DCentroid(*cluster, raw_c4);
+    const float dist3d = raw_c4.head<3>().norm();
+
+    RCLCPP_INFO(get_logger(),
+      "  [클러스터%zu] pts=%zu  bbox dx=%.2f dy=%.2f dz=%.2f  원점거리=%.2f m",
+      ci, cluster->size(), dx, dy, dz, dist3d);
+
+    // 거리 필터
+    if (dist3d < static_cast<float>(panel_min_distance_)) {
+      RCLCPP_INFO(get_logger(), "    → 거부 [근거리] %.2f < %.2f m", dist3d, panel_min_distance_);
+      reject_dist++;
+      continue;
+    }
+
+    // 패널 최대 치수 하한: 가장 긴 방향이 panel_size * 0.5 이상이어야 함
+    float dims[3] = {dx, dy, dz};
+    std::sort(dims, dims + 3);
+    if (dims[2] < sz * 0.5f) {
+      RCLCPP_INFO(get_logger(), "    → 거부 [크기부족] max_dim=%.2f < %.2f m", dims[2], sz * 0.5f);
+      reject_size++;
+      continue;
+    }
+
+    // RANSAC plane fitting
+    pcl::SACSegmentation<PointT> seg;
+    seg.setModelType(pcl::SACMODEL_PLANE);
+    seg.setMethodType(pcl::SAC_RANSAC);
+    seg.setDistanceThreshold(0.05f);
+    seg.setMaxIterations(500);
+    seg.setInputCloud(cluster);
+
+    pcl::ModelCoefficients::Ptr coeff(new pcl::ModelCoefficients);
+    pcl::PointIndices::Ptr inliers_idx(new pcl::PointIndices);
+    seg.segment(*inliers_idx, *coeff);
+
+    if (coeff->values.size() < 4) {
+      RCLCPP_INFO(get_logger(), "    → 거부 [RANSAC실패]");
+      reject_plane++;
+      continue;
+    }
+
+    const float inlier_ratio =
+      static_cast<float>(inliers_idx->indices.size()) / static_cast<float>(n);
+    if (inlier_ratio < static_cast<float>(panel_plane_inlier_thresh_)) {
+      RCLCPP_INFO(get_logger(),
+        "    → 거부 [평면성부족] inlier=%.0f%% < %.0f%%",
+        inlier_ratio * 100.f, panel_plane_inlier_thresh_ * 100.f);
+      reject_flat++;
+      continue;
+    }
+
+    // inlier cloud: face extent 검사 (inlier bbox의 두 큰 방향이 panel_size 범위)
+    CloudPtr face_cloud = std::make_shared<Cloud>();
+    {
+      pcl::ExtractIndices<PointT> ext2;
+      ext2.setInputCloud(cluster);
+      ext2.setIndices(inliers_idx);
+      ext2.filter(*face_cloud);
+    }
+
+    PointT fmin, fmax;
+    pcl::getMinMax3D(*face_cloud, fmin, fmax);
+    float fdims[3] = {fmax.x-fmin.x, fmax.y-fmin.y, fmax.z-fmin.z};
+    std::sort(fdims, fdims + 3);
+    // fdims[2] = 가장 넓은 방향, fdims[1] = 두번째, fdims[0] ≈ 0 (RANSAC inlier 두께)
+
+    if (fdims[2] > sz + tol) {
+      RCLCPP_INFO(get_logger(),
+        "    → 거부 [크기초과] inlier face max_dim=%.2f > %.2f m", fdims[2], sz + tol);
+      reject_size++;
+      continue;
+    }
+    if (fdims[1] < sz * 0.35f) {
+      RCLCPP_INFO(get_logger(),
+        "    → 거부 [선형클러스터] inlier second_dim=%.2f < %.2f m", fdims[1], sz * 0.35f);
+      reject_size++;
+      continue;
+    }
+
+    // 무게중심
+    Eigen::Vector4f fc4;
+    pcl::compute3DCentroid(*face_cloud, fc4);
+    const Eigen::Vector3f center = fc4.head<3>();
+
+    // 법선: 센서 원점 방향으로 flip (dot(n, -center) > 0)
+    Eigen::Vector3f n_vec(coeff->values[0], coeff->values[1], coeff->values[2]);
+    n_vec.normalize();
+    if (n_vec.dot(-center) < 0.0f) n_vec = -n_vec;
+
+    PanelTarget pt;
+    pt.center       = center;
+    pt.normal       = n_vec;
+    pt.inlier_ratio = inlier_ratio;
+    pt.n_inliers    = static_cast<int>(inliers_idx->indices.size());
+
+    RCLCPP_INFO(get_logger(),
+      "    → 패널 검출: center=(%.3f,%.3f,%.3f)  normal=(%.2f,%.2f,%.2f)"
+      "  inlier=%.0f%%  face(%.2f×%.2f)m  dist=%.2f m",
+      center.x(), center.y(), center.z(),
+      n_vec.x(), n_vec.y(), n_vec.z(),
+      inlier_ratio * 100.f, fdims[2], fdims[1], dist3d);
+
+    results.push_back(pt);
+  }
+
+  RCLCPP_INFO(get_logger(),
+    "  [필터 요약] 클러스터=%zu  통과=%zu  거부: 크기=%d 평면성=%d 근거리=%d RANSAC=%d",
+    all_clusters.size(), results.size(),
+    reject_size, reject_flat, reject_dist, reject_plane);
+
+  return results;
+}
+
+// ─────────── plane-to-plane SVD: R(법선 기반) + t(중심 기반) ─────────────────
+// src 패널 법선을 dst 패널 법선에 맞추는 R을 Kabsch SVD로 구하고,
+// 해당 R로 중심 대응쌍에서 t = mean(dst_i - R*src_i) 계산.
+// 순열 전수 탐색으로 최적 패널 매칭 결정.
+
+Eigen::Matrix4f LidarCalibrationNode::solvePlanesToPlanes(
+  const std::vector<PanelTarget> & src,
+  const std::vector<PanelTarget> & dst,
+  std::vector<int> & best_perm,
+  double & best_residual)
+{
+  const int N = static_cast<int>(dst.size());
+  std::vector<int> perm(N);
+  std::iota(perm.begin(), perm.end(), 0);
+
+  Eigen::Matrix4f best_T = Eigen::Matrix4f::Identity();
+  best_residual = std::numeric_limits<double>::max();
+  best_perm.assign(N, 0);
+
+  do {
+    // Step 1: Kabsch SVD on unit normals → rotation
+    Eigen::Matrix3f H = Eigen::Matrix3f::Zero();
+    for (int i = 0; i < N; ++i) {
+      H += dst[i].normal * src[perm[i]].normal.transpose();
+    }
+
+    Eigen::JacobiSVD<Eigen::Matrix3f> svd(H, Eigen::ComputeFullU | Eigen::ComputeFullV);
+    Eigen::Matrix3f R = svd.matrixV() * svd.matrixU().transpose();
+    if (R.determinant() < 0.0f) {
+      Eigen::Matrix3f V = svd.matrixV();
+      V.col(2) *= -1.0f;
+      R = V * svd.matrixU().transpose();
+    }
+
+    // Step 2: translation from panel centers given R
+    Eigen::Vector3f t_sum = Eigen::Vector3f::Zero();
+    for (int i = 0; i < N; ++i) {
+      t_sum += dst[i].center - R * src[perm[i]].center;
+    }
+    const Eigen::Vector3f t = t_sum / static_cast<float>(N);
+
+    // Residual: center L2 + (1 - |cos(normal angle)|)
+    double res = 0.0;
+    for (int i = 0; i < N; ++i) {
+      const Eigen::Vector3f c_t = R * src[perm[i]].center + t;
+      res += static_cast<double>((c_t - dst[i].center).norm());
+      const Eigen::Vector3f n_t = R * src[perm[i]].normal;
+      const float cos_ang = std::max(-1.0f, std::min(1.0f, n_t.dot(dst[i].normal)));
+      res += static_cast<double>(1.0f - std::abs(cos_ang));
+    }
+
+    if (res < best_residual) {
+      best_residual = res;
+      best_perm = perm;
+      best_T = Eigen::Matrix4f::Identity();
+      best_T.block<3, 3>(0, 0) = R;
+      best_T.block<3, 1>(0, 3) = t;
+    }
+  } while (std::next_permutation(perm.begin(), perm.end()));
+
+  // 최적 순열 및 대응쌍 잔차 로그
+  {
+    const Eigen::Matrix3f & R_b = best_T.block<3, 3>(0, 0);
+    const Eigen::Vector3f & t_b = best_T.block<3, 1>(0, 3);
+    std::string perm_str;
+    for (int i = 0; i < N; ++i) {
+      char buf[16];
+      snprintf(buf, sizeof(buf), "%d→%d ", best_perm[i], i);
+      perm_str += buf;
+    }
+    RCLCPP_INFO(rclcpp::get_logger("lidar_calibration_node"),
+      "  [solvePlanesToPlanes] 최적 순열: %s  총잔차=%.4f", perm_str.c_str(), best_residual);
+    for (int i = 0; i < N; ++i) {
+      const Eigen::Vector3f c_t = R_b * src[best_perm[i]].center + t_b;
+      const float c_err = (c_t - dst[i].center).norm();
+      const Eigen::Vector3f n_t = R_b * src[best_perm[i]].normal;
+      const float ang_deg =
+        std::acos(std::max(-1.0f, std::min(1.0f, n_t.dot(dst[i].normal))))
+        * 180.f / static_cast<float>(M_PI);
+      RCLCPP_INFO(rclcpp::get_logger("lidar_calibration_node"),
+        "    [패널%d] 중심잔차=%.4f m  법선각도=%.2f°", i, c_err, ang_deg);
+    }
+  }
+
+  return best_T;
+}
+
+// ────────────────────── service: plane_calibration ───────────────────────────
+
+void LidarCalibrationNode::srvPlaneCalibrate(
+  const std_srvs::srv::Trigger::Request::SharedPtr /*req*/,
+  std_srvs::srv::Trigger::Response::SharedPtr res)
+{
+  CloudPtr r1, r2;
+  {
+    std::lock_guard<std::mutex> lk(cloud_mutex_);
+    r1 = accumulated_raw1_;
+    r2 = accumulated_raw2_;
+  }
+
+  if (!r1 || r1->empty() || !r2 || r2->empty()) {
+    res->success = false;
+    res->message = "아직 포인트 클라우드 수신 전입니다. 잠시 후 다시 시도하세요.";
+    return;
+  }
+
+  RCLCPP_INFO(get_logger(), "=== 평면 패널 기반 캘리브레이션 시작 ===");
+  RCLCPP_INFO(get_logger(), "  누적 프레임=%d  cloud1=%zu pts  cloud2=%zu pts",
+    accum_count_, r1->size(), r2->size());
+  RCLCPP_INFO(get_logger(),
+    "  기대 패널 크기: %.1f×%.1f m  허용오차 ±%.1f m  최소거리 %.1f m",
+    panel_size_, panel_size_, panel_size_tol_, panel_min_distance_);
+  RCLCPP_INFO(get_logger(),
+    "[CONFIG] cluster_tol=%.2f m  min_pts=%d  plane_inlier≥%.0f%%",
+    panel_cluster_tol_, panel_min_cluster_, panel_plane_inlier_thresh_ * 100.0);
+
+  RCLCPP_INFO(get_logger(), "[LiDAR1] 패널 검출 중...");
+  auto panels1 = detectPanels(r1);
+
+  RCLCPP_INFO(get_logger(), "[LiDAR2] 패널 검출 중...");
+  auto panels2 = detectPanels(r2);
+
+  RCLCPP_INFO(get_logger(),
+    "검출 결과: LiDAR1=%zu개  LiDAR2=%zu개", panels1.size(), panels2.size());
+
+  auto logPanels = [&](const std::vector<PanelTarget> & panels, const char * label) {
+    for (size_t i = 0; i < panels.size(); ++i) {
+      RCLCPP_INFO(get_logger(),
+        "  [%s][%zu] center=(%.3f,%.3f,%.3f)  normal=(%.2f,%.2f,%.2f)"
+        "  inlier=%.0f%%  원점거리=%.2f m",
+        label, i,
+        panels[i].center.x(), panels[i].center.y(), panels[i].center.z(),
+        panels[i].normal.x(), panels[i].normal.y(), panels[i].normal.z(),
+        panels[i].inlier_ratio * 100.f, panels[i].center.norm());
+    }
+  };
+  logPanels(panels1, "LiDAR1");
+  logPanels(panels2, "LiDAR2");
+
+  if (panels1.size() < 2 || panels2.size() < 2) {
+    std::ostringstream oss;
+    oss << "패널 검출 부족 (LiDAR1=" << panels1.size()
+        << "개, LiDAR2=" << panels2.size() << "개). "
+        << "최소 2개 필요. panel_size/cluster_tolerance 조정 또는 패널 배치 확인.";
+    res->success = false;
+    res->message = oss.str();
+    RCLCPP_WARN(get_logger(), "%s", res->message.c_str());
+    return;
+  }
+  if (panels1.size() < 3 || panels2.size() < 3) {
+    RCLCPP_WARN(get_logger(),
+      "  ⚠ 패널 2개로 진행 (3개 권장). 6DOF 완전 결정을 위해 3개 배치 권장.");
+  }
+
+  const size_t n = std::min(panels1.size(), panels2.size());
+  if (panels1.size() != panels2.size()) {
+    RCLCPP_WARN(get_logger(), "  검출 수 불일치 → 각 %zu개로 사용", n);
+  }
+
+  // 품질 내림차순 정렬 후 상위 n개 사용
+  auto sort_by_quality = [](std::vector<PanelTarget> & v) {
+    std::sort(v.begin(), v.end(),
+      [](const PanelTarget & a, const PanelTarget & b) {
+        return a.inlier_ratio > b.inlier_ratio;
+      });
+  };
+  sort_by_quality(panels1);
+  sort_by_quality(panels2);
+
+  std::vector<PanelTarget> use1(panels1.begin(), panels1.begin() + static_cast<int>(n));
+  std::vector<PanelTarget> use2(panels2.begin(), panels2.begin() + static_cast<int>(n));
+
+  // 법선 다양성 검사: 법선이 모두 평행하면 yaw 이외의 회전 underdetermined
+  if (n >= 3) {
+    const Eigen::Vector3f v1 = use1[1].normal - use1[0].normal;
+    const Eigen::Vector3f v2 = use1[2].normal - use1[0].normal;
+    const float span = v1.cross(v2).norm();
+    RCLCPP_INFO(get_logger(), "  [LiDAR1] 법선 다양성 (cross norm): %.3f", span);
+    if (span < 0.05f) {
+      RCLCPP_WARN(get_logger(),
+        "  ⚠ 패널 법선이 거의 동일 (span=%.3f) — 회전 추정 불안정."
+        " 패널 각도를 다양하게 배치하세요.", span);
+    }
+  }
+
+  // 동일면 확인: 두 센서의 각 패널 법선이 동일 방향인지 검증
+  // T: src(L2) 법선을 R_yaw(π)로 변환하면 dst(L1) 법선과 일치해야 함
+  // 여기서는 검출 후 solvePlanesToPlanes가 최적 R을 결정하므로 사전 검사는 생략.
+
+  RCLCPP_INFO(get_logger(), "solvePlanesToPlanes 시작 (%zu개 패널)...", n);
+  std::vector<int> best_perm;
+  double residual;
+  const Eigen::Matrix4f svd_T = solvePlanesToPlanes(use2, use1, best_perm, residual);
+
+  double kx, ky, kz, kr, kp, kyaw;
+  matrixToRpy(svd_T, kx, ky, kz, kr, kp, kyaw);
+  RCLCPP_INFO(get_logger(),
+    "  SVD 결과: x=%.3f y=%.3f z=%.3f yaw=%.3f rad  총잔차=%.4f",
+    kx, ky, kz, kyaw, residual);
+  RCLCPP_INFO(get_logger(),
+    "  [SVD 타당성] roll=%.3f pitch=%.3f rad", kr, kp);
+
+  // 지상차량 구속: roll·pitch=0, yaw만 남긴 R로 t 재계산
+  Eigen::Matrix4f result_T = svd_T;
+  {
+    const float cy = std::cos(static_cast<float>(kyaw));
+    const float sy = std::sin(static_cast<float>(kyaw));
+    Eigen::Matrix4f R_yaw = Eigen::Matrix4f::Identity();
+    R_yaw(0, 0) =  cy;  R_yaw(0, 1) = -sy;
+    R_yaw(1, 0) =  sy;  R_yaw(1, 1) =  cy;
+
+    Eigen::Vector3f t_sum = Eigen::Vector3f::Zero();
+    for (size_t i = 0; i < n; ++i) {
+      const size_t j = static_cast<size_t>(best_perm[i]);
+      Eigen::Vector4f sp(use2[j].center.x(), use2[j].center.y(),
+                         use2[j].center.z(), 1.0f);
+      t_sum += use1[i].center - (R_yaw * sp).head<3>();
+    }
+    const Eigen::Vector3f t_mean = t_sum / static_cast<float>(n);
+
+    result_T = R_yaw;
+    result_T.block<3, 1>(0, 3) = t_mean;
+
+    double gx, gy, gz, gr, gp, gyaw2;
+    matrixToRpy(result_T, gx, gy, gz, gr, gp, gyaw2);
+    RCLCPP_INFO(get_logger(),
+      "  [지상구속] 적용: x=%.3f y=%.3f z=%.3f yaw=%.4f rad"
+      "  (SVD z=%.3f → Δ=%.3f m)",
+      gx, gy, gz, gyaw2, kz, gz - kz);
+  }
+
+  // 각 패널 쌍의 중심 잔차 계산 (현재 result_T 기준)
+  double center_res_sum = 0.0;
+  {
+    const Eigen::Matrix3f & R_f = result_T.block<3, 3>(0, 0);
+    const Eigen::Vector3f & t_f = result_T.block<3, 1>(0, 3);
+    RCLCPP_INFO(get_logger(), "  [중심 잔차 최종]");
+    for (size_t i = 0; i < n; ++i) {
+      const size_t j = static_cast<size_t>(best_perm[i]);
+      const Eigen::Vector3f c_t = R_f * use2[j].center + t_f;
+      const float c_err = (c_t - use1[i].center).norm();
+      center_res_sum += static_cast<double>(c_err);
+      RCLCPP_INFO(get_logger(),
+        "    [패널%zu] L2→L1 변환 후 중심잔차=%.4f m", i, c_err);
+    }
+  }
+  const double center_res_per_panel = center_res_sum / static_cast<double>(n);
+
+  current_T_     = result_T;
+  current_score_ = center_res_per_panel;
+  icp_done_      = true;
+  broadcastTransform(current_T_);
+
+  double x, y, z, roll, pitch, yaw;
+  matrixToRpy(current_T_, x, y, z, roll, pitch, yaw);
+
+  RCLCPP_INFO(get_logger(), "══════════════════ 캘리브레이션 결과 요약 ══════════════════");
+  RCLCPP_INFO(get_logger(), "  [검출] LiDAR1=%zu  LiDAR2=%zu  (%zu개 사용)",
+    panels1.size(), panels2.size(), n);
+  RCLCPP_INFO(get_logger(), "  [SVD  ] 총잔차=%.4f  중심잔차=%.4f m/패널",
+    residual, center_res_per_panel);
+  RCLCPP_INFO(get_logger(), "  [결과 ] x=%.4f y=%.4f z=%.4f  roll=%.4f pitch=%.4f yaw=%.4f rad",
+    x, y, z, roll, pitch, yaw);
+  RCLCPP_INFO(get_logger(), "════════════════════════════════════════════════════════════");
+
+  std::ostringstream oss;
+  oss << std::fixed << std::setprecision(6)
+      << "패널 캘리브레이션 성공  중심잔차=" << center_res_per_panel << " m/패널"
+      << "  x=" << x << " y=" << y << " z=" << z
+      << " roll=" << roll << " pitch=" << pitch << " yaw=" << yaw;
+  res->success = true;
+  res->message = oss.str();
+  RCLCPP_INFO(get_logger(), "%s", res->message.c_str());
+}
+
 // ─────────────────── Kabsch SVD: T * src[i] ≈ dst[i] ────────────────────────
 
 Eigen::Matrix4f LidarCalibrationNode::kabsch(
@@ -818,24 +1421,37 @@ void LidarCalibrationNode::srvSphereCalibrate(
     accum_count_, r1->size(), r2->size());
   RCLCPP_INFO(get_logger(), "  기대 구 반지름: %.2f ± %.2f m", sphere_radius_, sphere_radius_tol_);
 
-  // 누적 cloud를 큐브 검출과 동일한 voxel 크기로 다운샘플
-  auto voxelize = [&](const CloudPtr & cloud_in) {
+  // 구 검출용 cloud 준비.
+  // sphere_detection_voxel_size=0.0: voxelization 없음 (정적 Isaac Sim 씬에서 권장).
+  //   → 매 프레임 동일 위치 repeated hits 보존 → 모든 링이 충분한 pts를 가짐.
+  // sphere_detection_voxel_size>0: 지정 크기로 다운샘플 (대용량 실차 cloud 성능 제한용).
+  auto sphere_voxelize = [&](const CloudPtr & cloud_in) -> CloudPtr {
+    if (sphere_detection_voxel_size_ <= 0.0) {
+      return cloud_in;   // no voxelization
+    }
     CloudPtr cloud_out = std::make_shared<Cloud>();
     pcl::VoxelGrid<PointT> vg;
     vg.setInputCloud(cloud_in);
-    const float leaf = static_cast<float>(cube_detection_voxel_size_);
+    const float leaf = static_cast<float>(sphere_detection_voxel_size_);
     vg.setLeafSize(leaf, leaf, leaf);
     vg.filter(*cloud_out);
     return cloud_out;
   };
-  CloudPtr v1 = voxelize(r1);
-  CloudPtr v2 = voxelize(r2);
-  RCLCPP_INFO(get_logger(),
-    "  [전처리] cloud1: %zu → voxel(%.2fm) → %zu pts",
-    r1->size(), cube_detection_voxel_size_, v1->size());
-  RCLCPP_INFO(get_logger(),
-    "  [전처리] cloud2: %zu → voxel(%.2fm) → %zu pts",
-    r2->size(), cube_detection_voxel_size_, v2->size());
+  CloudPtr v1 = sphere_voxelize(r1);
+  CloudPtr v2 = sphere_voxelize(r2);
+  if (sphere_detection_voxel_size_ > 0.0) {
+    RCLCPP_INFO(get_logger(),
+      "  [전처리] cloud1: %zu → voxel(%.2fm) → %zu pts",
+      r1->size(), sphere_detection_voxel_size_, v1->size());
+    RCLCPP_INFO(get_logger(),
+      "  [전처리] cloud2: %zu → voxel(%.2fm) → %zu pts",
+      r2->size(), sphere_detection_voxel_size_, v2->size());
+  } else {
+    RCLCPP_INFO(get_logger(),
+      "  [전처리] cloud1: %zu pts (no voxel), cloud2: %zu pts (no voxel) "
+      "— repeated hits 보존",
+      v1->size(), v2->size());
+  }
 
   RCLCPP_INFO(get_logger(), "[LiDAR1] 구 검출 중...");
   auto centers1 = detectSpheres(v1);
@@ -846,15 +1462,21 @@ void LidarCalibrationNode::srvSphereCalibrate(
   RCLCPP_INFO(get_logger(), "검출 결과: LiDAR1=%zu개  LiDAR2=%zu개",
     centers1.size(), centers2.size());
 
-  if (centers1.size() < 3 || centers2.size() < 3) {
+  if (centers1.size() < 2 || centers2.size() < 2) {
     std::ostringstream oss;
     oss << "구 검출 실패 (LiDAR1=" << centers1.size()
         << "개, LiDAR2=" << centers2.size() << "개). "
-        << "최소 3개 필요. sphere_radius / sphere_cluster_tolerance 조정 또는 구 배치 확인.";
+        << "최소 2개 필요. sphere_radius / sphere_cluster_tolerance 조정 또는 구 배치 확인.";
     res->success = false;
     res->message = oss.str();
     RCLCPP_WARN(get_logger(), "%s", res->message.c_str());
     return;
+  }
+  if (centers1.size() < 3 || centers2.size() < 3) {
+    RCLCPP_WARN(get_logger(),
+      "  ⚠ 구 2개로 진행 (LiDAR1=%zu  LiDAR2=%zu). 3개 권장."
+      " 차체 가림 여부 확인 또는 구 배치 조정.",
+      centers1.size(), centers2.size());
   }
 
   if (centers1.size() != centers2.size()) {
@@ -907,41 +1529,54 @@ void LidarCalibrationNode::srvSphereCalibrate(
   }
 
   // 지상구속: roll·pitch=0 → yaw만 남긴 R, translation = mean(dst_i - R*src_i)
+  // 지상 AGV 물리 제약이므로 항상 적용. roll≈π 는 face fallback 노이즈에 의한
+  // mirror 해 → 구 방향 벡터로 yaw 직접 재계산.
   Eigen::Matrix4f result_T = kabsch_T;
   {
     double kx, ky, kz, kr, kp, kyaw;
     matrixToRpy(kabsch_T, kx, ky, kz, kr, kp, kyaw);
-    const double rp_thr = 0.10;
 
-    if (std::abs(kr) < rp_thr && std::abs(kp) < rp_thr) {
-      const float cy = std::cos(static_cast<float>(kyaw));
-      const float sy = std::sin(static_cast<float>(kyaw));
-      Eigen::Matrix4f R_yaw = Eigen::Matrix4f::Identity();
-      R_yaw(0, 0) =  cy;  R_yaw(0, 1) = -sy;
-      R_yaw(1, 0) =  sy;  R_yaw(1, 1) =  cy;
-
-      Eigen::Vector3f t_sum = Eigen::Vector3f::Zero();
-      for (size_t i = 0; i < n; ++i) {
-        const size_t j = (best_perm.size() == n) ? static_cast<size_t>(best_perm[i]) : i;
-        Eigen::Vector4f sp(centers2[j].x(), centers2[j].y(), centers2[j].z(), 1.0f);
-        t_sum += centers1[i] - (R_yaw * sp).head<3>();
-      }
-      const Eigen::Vector3f t_mean = t_sum / static_cast<float>(n);
-
-      result_T = R_yaw;
-      result_T.block<3, 1>(0, 3) = t_mean;
-
-      double gx, gy, gz, gr, gp, gyaw2;
-      matrixToRpy(result_T, gx, gy, gz, gr, gp, gyaw2);
-      RCLCPP_INFO(get_logger(),
-        "  [지상구속] 적용: x=%.3f y=%.3f z=%.3f yaw=%.4f rad"
-        "  (Kabsch z=%.3f → 개선 Δ=%.3f m)",
-        gx, gy, gz, gyaw2, kz, gz - kz);
-    } else {
-      RCLCPP_INFO(get_logger(),
-        "  [지상구속] 미적용 — roll=%.3f pitch=%.3f rad (임계값 %.2f rad 초과)",
-        kr, kp, rp_thr);
+    if (n >= 2 && std::abs(std::abs(kr) - M_PI) < 0.3) {
+      // Kabsch SVD mirror 해: roll≈π → 구 간 방향 벡터로 yaw 재계산
+      const size_t j0 = (best_perm.size() == n) ? static_cast<size_t>(best_perm[0]) : 0;
+      const size_t j1 = (best_perm.size() == n) ? static_cast<size_t>(best_perm[1]) : 1;
+      const double dx1 = centers1[1].x() - centers1[0].x();
+      const double dy1 = centers1[1].y() - centers1[0].y();
+      const double dx2 = centers2[j1].x() - centers2[j0].x();
+      const double dy2 = centers2[j1].y() - centers2[j0].y();
+      const double yaw_vec = std::atan2(dy1, dx1) - std::atan2(dy2, dx2);
+      RCLCPP_WARN(get_logger(),
+        "  [지상구속] roll=%.3f ≈ π → mirror 해 감지."
+        " yaw 재계산: %.4f rad (Kabsch yaw: %.4f rad)", kr, yaw_vec, kyaw);
+      kyaw = yaw_vec;
+    } else if (std::abs(kr) > 0.10 || std::abs(kp) > 0.10) {
+      RCLCPP_WARN(get_logger(),
+        "  [지상구속] roll=%.3f pitch=%.3f rad 큼 — 물리 제약 강제 적용", kr, kp);
     }
+
+    const float cy = std::cos(static_cast<float>(kyaw));
+    const float sy = std::sin(static_cast<float>(kyaw));
+    Eigen::Matrix4f R_yaw = Eigen::Matrix4f::Identity();
+    R_yaw(0, 0) =  cy;  R_yaw(0, 1) = -sy;
+    R_yaw(1, 0) =  sy;  R_yaw(1, 1) =  cy;
+
+    Eigen::Vector3f t_sum = Eigen::Vector3f::Zero();
+    for (size_t i = 0; i < n; ++i) {
+      const size_t j = (best_perm.size() == n) ? static_cast<size_t>(best_perm[i]) : i;
+      Eigen::Vector4f sp(centers2[j].x(), centers2[j].y(), centers2[j].z(), 1.0f);
+      t_sum += centers1[i] - (R_yaw * sp).head<3>();
+    }
+    const Eigen::Vector3f t_mean = t_sum / static_cast<float>(n);
+
+    result_T = R_yaw;
+    result_T.block<3, 1>(0, 3) = t_mean;
+
+    double gx, gy, gz, gr, gp, gyaw2;
+    matrixToRpy(result_T, gx, gy, gz, gr, gp, gyaw2);
+    RCLCPP_INFO(get_logger(),
+      "  [지상구속] 적용: x=%.3f y=%.3f z=%.3f yaw=%.4f rad"
+      "  (Kabsch z=%.3f → 개선 Δ=%.3f m)",
+      gx, gy, gz, gyaw2, kz, gz - kz);
   }
 
   current_T_     = result_T;
@@ -1145,19 +1780,8 @@ void LidarCalibrationNode::srvCubeCalibrate(
       "  큐브 무게중심 translation 추정: x=%.3f y=%.3f z=%.3f",
       t_approx.x(), t_approx.y(), t_approx.z());
 
-    // multi-yaw ICP (voxelized cached cloud 사용)
-    CloudPtr ci1, ci2;
-    {
-      std::lock_guard<std::mutex> lk(cloud_mutex_);
-      ci1 = cached_cloud1_;
-      ci2 = cached_cloud2_;
-    }
-    if (!ci1 || !ci2) {
-      res->success = false;
-      res->message = "ICP용 cloud 미수신.";
-      return;
-    }
-
+    // multi-yaw ICP — 누적 cloud(c1, c2, 0.1m voxel) 사용
+    // cached_cloud는 최신 단일 프레임으로 15m 이격 환경에서 포인트 밀도 불충분
     Eigen::Matrix4f best_T;
     double best_score = std::numeric_limits<double>::max();
     bool found = false;
@@ -1174,8 +1798,8 @@ void LidarCalibrationNode::srvCubeCalibrate(
 
       Eigen::Matrix4f cr, fr;
       double cs, fs;
-      if (!runICP(ci2, ci1, g, cr, cs, search_corr_dist_)) continue;
-      if (!runICP(ci2, ci1, cr, fr, fs, refine_corr_dist_)) { fr = cr; fs = cs; }
+      if (!runICP(c2, c1, g, cr, cs, search_corr_dist_)) continue;
+      if (!runICP(c2, c1, cr, fr, fs, refine_corr_dist_)) { fr = cr; fs = cs; }
 
       RCLCPP_INFO(get_logger(), "    [%d/%d] yaw=%.0f°  score=%.4f%s",
         i+1, n_yaw, yaw*180/M_PI, fs, fs < best_score ? " ★" : "");
@@ -1421,7 +2045,7 @@ void LidarCalibrationNode::srvCubeCalibrate(
   // 누적 클라우드(3개 큐브 클러스터)로 ICP를 돌리면 서로 다른 큐브 면끼리
   // 잘못 대응하여 국소 최솟값에 빠질 수 있음 → drift가 크면 Kabsch 결과 사용
   {
-    const float drift_limit = 0.15f;  // [m]
+    const float drift_limit = 0.30f;  // [m] — 15m 이격 시 Kabsch 오차 최대 ~0.2m 허용
     const Eigen::Vector3f t_init = icp_init_T.block<3, 1>(0, 3);
     const Eigen::Vector3f t_fine = fine_T.block<3, 1>(0, 3);
     const float drift = (t_fine - t_init).norm();

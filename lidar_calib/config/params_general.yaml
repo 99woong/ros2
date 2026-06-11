@@ -67,7 +67,7 @@ lidar_calibration_node:
     cube_size_xy:            1.0    # 큐브 수평 변 길이 [m]
     cube_size_z:             2.0    # 큐브 높이 [m]
     cube_size_tolerance:     0.4    # bbox 크기 허용 오차 [m]
-    cube_cluster_tolerance:  0.40   # 클러스터링 거리 [m] — 차량 프레임 빔 차단으로 0.30m 간격 발생 → 0.40m 필요
+    cube_cluster_tolerance:  0.65   # 클러스터링 거리 [m] — 15m 이격 시 원거리 센서 ~20m 관측, OS1-32 수직간격 0.51m → 0.65m 필요
     cube_min_cluster_size:   5      # 클러스터 최소 포인트 수 (원거리 22m 고려)
     cube_max_cluster_size:   2000   # 클러스터 최대 포인트 수
     cube_plane_inlier_min:   0.5    # plane RANSAC 최소 inlier 비율 (0.4는 차체 오검출 허용)

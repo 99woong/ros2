@@ -50,6 +50,14 @@ struct CubeTarget {
   float           face_z_max{0.f}; // RANSAC inlier face z 최댓값
 };
 
+// 대형 평면 패널 타겟 (1.5m × 1.5m, AGV 한쪽 측면 배치, 두 센서 동일면 관측)
+struct PanelTarget {
+  Eigen::Vector3f center;         // RANSAC inlier 무게중심
+  Eigen::Vector3f normal;         // 정규화 법선 벡터 (센서 방향으로 flip 통일)
+  float           inlier_ratio{0.f};
+  int             n_inliers{0};
+};
+
 class LidarCalibrationNode : public rclcpp::Node
 {
 public:
@@ -86,6 +94,16 @@ private:
   // 큐브 클러스터 검출 → plane RANSAC으로 기하 중심 추정
   std::vector<CubeTarget> detectCubeCenters(const CloudPtr & cloud);
 
+  // 대형 평면 패널 검출 → RANSAC plane으로 법선·중심 추정
+  std::vector<PanelTarget> detectPanels(const CloudPtr & cloud);
+
+  // plane-to-plane SVD: src[perm[i]] → dst[i] 를 최소화하는 T 반환
+  static Eigen::Matrix4f solvePlanesToPlanes(
+    const std::vector<PanelTarget> & src,
+    const std::vector<PanelTarget> & dst,
+    std::vector<int> & best_perm,
+    double & best_residual);
+
   // Kabsch SVD: T 를 구해 T * src[i] ≈ dst[i] 를 만족 (weights 비어있으면 균등)
   static Eigen::Matrix4f kabsch(
     const std::vector<Eigen::Vector3f> & src,
@@ -116,6 +134,10 @@ private:
     std_srvs::srv::Trigger::Response::SharedPtr res);
 
   void srvCubeCalibrate(      // 큐브 Kabsch SVD + ICP 정제 (초기값 불필요)
+    const std_srvs::srv::Trigger::Request::SharedPtr req,
+    std_srvs::srv::Trigger::Response::SharedPtr res);
+
+  void srvPlaneCalibrate(     // 대형 평면 패널 SVD (한쪽 측면 배치, 동일면 관측)
     const std_srvs::srv::Trigger::Request::SharedPtr req,
     std_srvs::srv::Trigger::Response::SharedPtr res);
 
@@ -159,6 +181,7 @@ private:
   double sphere_cluster_tol_;
   int    sphere_min_cluster_;
   int    sphere_max_cluster_;
+  double sphere_detection_voxel_size_;  // 0.0 = no voxel (정적 씬 권장), >0 = voxel size [m]
 
   // Cube calibration
   double cube_size_xy_;
@@ -170,6 +193,16 @@ private:
   double cube_plane_inlier_thresh_;
   double cube_min_distance_;    // 클러스터 무게중심이 이 거리 이상이어야 큐브로 인정
   double cube_detection_voxel_size_;
+
+  // Panel calibration (대형 평면 패널, AGV 한쪽 측면 배치)
+  double panel_size_;               // 패널 한 변 길이 [m]
+  double panel_size_tol_;           // 크기 허용오차 [m]
+  double panel_cluster_tol_;        // 클러스터링 tolerance (빔 간격 기준)
+  int    panel_min_cluster_;
+  int    panel_max_cluster_;
+  double panel_plane_inlier_thresh_;
+  double panel_min_distance_;
+  double panel_detection_voxel_size_;
 
   double sync_slop_sec_;
   std::string output_path_;
@@ -200,6 +233,7 @@ private:
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_calib_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_sphere_calib_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_cube_calib_;
+  rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_plane_calib_;
   rclcpp::Service<std_srvs::srv::Trigger>::SharedPtr srv_save_;
 };
 

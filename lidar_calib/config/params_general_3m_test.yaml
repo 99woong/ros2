@@ -46,8 +46,8 @@ lidar_calibration_node:
     # ── Topics / Frames ───────────────────────────────────────────────────────
     lidar1_topic: "/point_cloud"
     lidar2_topic: "/point_cloud2"
-    lidar1_frame: "sim_lidar"
-    lidar2_frame: "sim_lidar2"
+    lidar1_frame: "lidar_front"
+    lidar2_frame: "lidar_rear"
 
     # ── Time sync ─────────────────────────────────────────────────────────────
     sync_slop_sec: 0.05
@@ -64,9 +64,9 @@ lidar_calibration_node:
     # Kabsch SVD 정상 동작 시 이 값은 사용되지 않음.
     # LiDAR2가 LiDAR1 기준 +X 방향 3m 위치 가정.
     # 실제 Isaac Sim 세팅에 맞게 수정할 것.
-    init_x:  3.0
-    init_y:  0.0
-    init_z:  0.0
+    init_x:  10.3
+    init_y:   0.38
+    init_z:   0.0
 
     yaw_candidates: 8
 
@@ -83,9 +83,15 @@ lidar_calibration_node:
     # ── Sphere Calibration ─────────────────────────────────────────────────────
     sphere_radius:            0.5
     sphere_radius_tolerance:  0.1
-    sphere_cluster_tolerance: 0.4
-    sphere_min_cluster_size:  15
+    # 32ch LiDAR @12m: 수직 빔 간격 = 12×0.0253=0.30m → 0.4m OK
+    # @15m: 0.38m → 0.4m 아슬아슬. 여유 확보를 위해 0.55m 사용
+    sphere_cluster_tolerance: 0.55
+    sphere_min_cluster_size:  10     # 15→10: 원거리 희박 클러스터 허용
     sphere_max_cluster_size:  3000
+    # sphere_detection_voxel_size: 구 검출 전용 voxel 크기.
+    #   0.02m 사용: 고유 위치만 보존 (unique pts) → 큰 구 클러스터 3000 pts 미만 유지.
+    #   0.0 (no voxel): raw 누적으로 pts 폭발 → max_cluster_size 초과 거부 + 클러스터링 수초 소요.
+    sphere_detection_voxel_size: 0.02
 
     # ── Cube Calibration ──────────────────────────────────────────────────────
     cube_size_xy:            1.0    # 큐브 수평 변 [m]
