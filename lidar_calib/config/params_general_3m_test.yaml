@@ -114,5 +114,33 @@ lidar_calibration_node:
     # 이 값이 5.0m이면 큐브A(4.3m)·큐브B(6.3m)가 전부 '근거리 차체'로 거부됨.
     cube_min_distance:       2.0    # [m]  (AGV 운용 시: 5.0)
 
+    # ── Panel Calibration ─────────────────────────────────────────────────────
+    # 대형 평면 패널(1.5m × 1.5m) 3장 사용.
+    #
+    # ★ 배치 원칙: Ry(π) 퇴화 해 방지
+    #   양쪽 LiDAR가 보는 패널 x좌표 집합이 서로 부호 반전 후에도 겹치지 않아야 함.
+    #   LiDAR1(x=-8)이 보는 x집합 ≠ LiDAR2(x=+8)이 보는 x집합을 Ry(π)로 반전한 값
+    #
+    #   [잘못된 예] 패널 world x = {-2, 0, +2}  → L1={6,8,10}  L2-negated={6,8,10}  → 퇴화!
+    #   [올바른 예] 패널 world x = {-5, 0, +2}  → L1={3,8,10}  L2-negated={6,8,13} → 정상
+    #
+    #              Y(전방)
+    #              ↑
+    #   ■ 패널C           ■ 패널B
+    #  (-5, 6, 22)       (2, 6, 22)
+    #
+    #        ■ 패널A  (0, 6, 22)
+    #
+    # ← LiDAR_front(-8,0,20) ──────── LiDAR_rear(+8,0,20) →
+    #
+    panel_size:                 1.5
+    panel_size_tolerance:       0.3
+    panel_cluster_tolerance:    0.45
+    panel_min_cluster_size:     10
+    panel_max_cluster_size:     3000
+    panel_plane_inlier_min:     0.65
+    panel_min_distance:         3.0
+    panel_detection_voxel_size: 0.05
+
     # ── Output ────────────────────────────────────────────────────────────────
     output_path: "/tmp/lidar_calib_3m_test.yaml"

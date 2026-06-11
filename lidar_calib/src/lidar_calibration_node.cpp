@@ -175,6 +175,41 @@ LidarCalibrationNode::LidarCalibrationNode(const rclcpp::NodeOptions & options)
     std::bind(&LidarCalibrationNode::cloudCallback, this,
       std::placeholders::_1, std::placeholders::_2));
 
+  // ── 개별 토픽 수신 진단 구독 (sync와 독립적으로 각 토픽 도달 여부 확인) ──
+  raw_sub1_diag_ = create_subscription<sensor_msgs::msg::PointCloud2>(
+    t1, rclcpp::SensorDataQoS(),
+    [this](const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
+      ++raw_count1_;
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 3000,
+        "[diag topic1] 누적수신=%lu  pts=%u  stamp=%.3f",
+        raw_count1_.load(), msg->width * msg->height,
+        msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9);
+    });
+  raw_sub2_diag_ = create_subscription<sensor_msgs::msg::PointCloud2>(
+    t2, rclcpp::SensorDataQoS(),
+    [this](const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
+      ++raw_count2_;
+      RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 3000,
+        "[diag topic2] 누적수신=%lu  pts=%u  stamp=%.3f",
+        raw_count2_.load(), msg->width * msg->height,
+        msg->header.stamp.sec + msg->header.stamp.nanosec * 1e-9);
+    });
+
+  // 5초마다 수신 통계 출력 — sync 콜백이 안 튀는 이유 파악용
+  diag_timer_ = create_wall_timer(std::chrono::seconds(5), [this]() {
+    RCLCPP_INFO(get_logger(),
+      "[diag 요약] topic1=%lu msgs  topic2=%lu msgs  sync_cb=%lu회  accum_frames=%d",
+      raw_count1_.load(), raw_count2_.load(), sync_cb_count_.load(), accum_count_);
+    if (raw_count1_.load() == 0)
+      RCLCPP_WARN(get_logger(), "  ★ topic1 메시지 0개 — 토픽명/QoS 확인 필요");
+    if (raw_count2_.load() == 0)
+      RCLCPP_WARN(get_logger(), "  ★ topic2 메시지 0개 — 토픽명/QoS 확인 필요");
+    if (raw_count1_.load() > 0 && raw_count2_.load() > 0 && sync_cb_count_.load() == 0)
+      RCLCPP_WARN(get_logger(),
+        "  ★ 두 토픽 모두 수신 중이나 sync 콜백 0회 — sync_slop_sec(%.3f) 증가 필요?",
+        sync_slop_sec_);
+  });
+
   RCLCPP_INFO(get_logger(), "=== lidar_calib node started ===");
   RCLCPP_INFO(get_logger(), "  mode   : %s", lidar_mode_.c_str());
   RCLCPP_INFO(get_logger(), "  lidar1 : %s  frame=%s", t1.c_str(), lidar1_frame_.c_str());
@@ -194,6 +229,14 @@ void LidarCalibrationNode::cloudCallback(
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & msg1,
   const sensor_msgs::msg::PointCloud2::ConstSharedPtr & msg2)
 {
+  ++sync_cb_count_;
+  RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 3000,
+    "[sync cb #%lu] msg1=%u pts  msg2=%u pts  stamp1=%.3f  stamp2=%.3f",
+    sync_cb_count_.load(),
+    msg1->width * msg1->height, msg2->width * msg2->height,
+    msg1->header.stamp.sec + msg1->header.stamp.nanosec * 1e-9,
+    msg2->header.stamp.sec + msg2->header.stamp.nanosec * 1e-9);
+
   // voxelized (ICP용)
   CloudPtr c1 = preprocessCloud(msg1, voxel_size_);
   CloudPtr c2 = preprocessCloud(msg2, voxel_size_);
@@ -208,9 +251,9 @@ void LidarCalibrationNode::cloudCallback(
     msg1->width * msg1->height, msg2->width * msg2->height,
     c1->size(), c2->size());
 
-  if (c1->empty() || c2->empty()) {
+  if (c1->empty() && c2->empty()) {
     RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 5000,
-      "전처리 후 포인트 클라우드 비어 있음"
+      "두 클라우드 모두 비어 있음"
       "  [raw] msg1=%u pts  msg2=%u pts"
       "  [z범위] %.1f~%.1f m  [거리범위] %.1f~%.1f m",
       msg1->width * msg1->height, msg2->width * msg2->height,
@@ -218,18 +261,24 @@ void LidarCalibrationNode::cloudCallback(
     return;
   }
 
+  CloudPtr vis1, vis2;
   {
     std::lock_guard<std::mutex> lk(cloud_mutex_);
-    cached_cloud1_ = c1;
-    cached_cloud2_ = c2;
-    cached_raw1_   = r1;
-    cached_raw2_   = r2;
 
-    // 큐브 검출용 누적 cloud — 매 프레임 추가
     if (!accumulated_raw1_) accumulated_raw1_ = std::make_shared<Cloud>();
     if (!accumulated_raw2_) accumulated_raw2_ = std::make_shared<Cloud>();
-    *accumulated_raw1_ += *r1;
-    *accumulated_raw2_ += *r2;
+
+    // 유효한 센서만 독립적으로 latch/누적 (교번 스캔 대응)
+    if (!c1->empty()) {
+      cached_cloud1_ = c1;
+      cached_raw1_   = r1;
+      *accumulated_raw1_ += *r1;
+    }
+    if (!c2->empty()) {
+      cached_cloud2_ = c2;
+      cached_raw2_   = r2;
+      *accumulated_raw2_ += *r2;
+    }
     accum_count_++;
 
     RCLCPP_INFO_THROTTLE(get_logger(), *get_clock(), 10000,
@@ -238,7 +287,7 @@ void LidarCalibrationNode::cloudCallback(
 
     // 누적 포인트가 50k 초과 시 voxel 다운샘플 (0.05m) 로 크기 제어
     const size_t MAX_ACCUM = 50000;
-    if (accumulated_raw1_->size() > MAX_ACCUM) {
+    if (accumulated_raw1_->size() > MAX_ACCUM || accumulated_raw2_->size() > MAX_ACCUM) {
       auto voxel_reduce = [](CloudPtr & cloud) {
         pcl::VoxelGrid<PointT> vg;
         vg.setInputCloud(cloud);
@@ -250,11 +299,19 @@ void LidarCalibrationNode::cloudCallback(
       voxel_reduce(accumulated_raw1_);
       voxel_reduce(accumulated_raw2_);
     }
+
+    vis1 = cached_cloud1_;
+    vis2 = cached_cloud2_;
+  }
+
+  // 두 캐시 모두 유효해야 시각화 발행
+  if (!vis1 || vis1->empty() || !vis2 || vis2->empty()) {
+    return;
   }
 
   CloudPtr c2_aligned = std::make_shared<Cloud>();
-  pcl::transformPointCloud(*c2, *c2_aligned, current_T_);
-  publishClouds(c1, c2_aligned, now());
+  pcl::transformPointCloud(*vis2, *c2_aligned, current_T_);
+  publishClouds(vis1, c2_aligned, now());
 }
 
 // ──────────────────────────────────────────────────────── preprocessing ──────
@@ -976,10 +1033,32 @@ std::vector<PanelTarget> LidarCalibrationNode::detectPanels(const CloudPtr & clo
       continue;
     }
 
-    // 무게중심
-    Eigen::Vector4f fc4;
-    pcl::compute3DCentroid(*face_cloud, fc4);
-    const Eigen::Vector3f center = fc4.head<3>();
+    // RANSAC 평면 좌표계에서 bounding box 중심 (비균등 샘플링 편향 제거)
+    // centroid 대신 bbox 중심 사용: 사선 관측 시 가까운 쪽으로 치우치는 편향을 제거
+    Eigen::Vector3f n_unit(coeff->values[0], coeff->values[1], coeff->values[2]);
+    n_unit.normalize();
+    const Eigen::Vector3f u_ax = (std::abs(n_unit.z()) < 0.9f)
+        ? n_unit.cross(Eigen::Vector3f::UnitZ()).normalized()
+        : n_unit.cross(Eigen::Vector3f::UnitX()).normalized();
+    const Eigen::Vector3f v_ax = n_unit.cross(u_ax).normalized();
+
+    float u_min =  std::numeric_limits<float>::max();
+    float u_max = -std::numeric_limits<float>::max();
+    float v_min =  std::numeric_limits<float>::max();
+    float v_max = -std::numeric_limits<float>::max();
+    float d_sum = 0.0f;
+    for (const auto & fp : face_cloud->points) {
+      const Eigen::Vector3f p(fp.x, fp.y, fp.z);
+      u_min = std::min(u_min, p.dot(u_ax));
+      u_max = std::max(u_max, p.dot(u_ax));
+      v_min = std::min(v_min, p.dot(v_ax));
+      v_max = std::max(v_max, p.dot(v_ax));
+      d_sum += p.dot(n_unit);
+    }
+    const Eigen::Vector3f center =
+        (d_sum / static_cast<float>(face_cloud->size())) * n_unit
+        + ((u_min + u_max) * 0.5f) * u_ax
+        + ((v_min + v_max) * 0.5f) * v_ax;
 
     // 법선: 센서 원점 방향으로 flip (dot(n, -center) > 0)
     Eigen::Vector3f n_vec(coeff->values[0], coeff->values[1], coeff->values[2]);
@@ -1030,10 +1109,19 @@ Eigen::Matrix4f LidarCalibrationNode::solvePlanesToPlanes(
   best_perm.assign(N, 0);
 
   do {
-    // Step 1: Kabsch SVD on unit normals → rotation
+    // 가중치: 두 센서 중 포인트 수가 적은 쪽(= 원거리·희박)이 낮은 신뢰도를 가짐
+    float w_total = 0.0f;
+    std::vector<float> w(N);
+    for (int i = 0; i < N; ++i) {
+      w[i] = static_cast<float>(std::min(src[perm[i]].n_inliers, dst[i].n_inliers));
+      w_total += w[i];
+    }
+    if (w_total <= 0.0f) w_total = static_cast<float>(N);
+
+    // Step 1: weighted Kabsch SVD on unit normals → rotation
     Eigen::Matrix3f H = Eigen::Matrix3f::Zero();
     for (int i = 0; i < N; ++i) {
-      H += dst[i].normal * src[perm[i]].normal.transpose();
+      H += (w[i] / w_total) * (dst[i].normal * src[perm[i]].normal.transpose());
     }
 
     Eigen::JacobiSVD<Eigen::Matrix3f> svd(H, Eigen::ComputeFullU | Eigen::ComputeFullV);
@@ -1044,21 +1132,22 @@ Eigen::Matrix4f LidarCalibrationNode::solvePlanesToPlanes(
       R = V * svd.matrixU().transpose();
     }
 
-    // Step 2: translation from panel centers given R
+    // Step 2: weighted translation from panel centers given R
     Eigen::Vector3f t_sum = Eigen::Vector3f::Zero();
     for (int i = 0; i < N; ++i) {
-      t_sum += dst[i].center - R * src[perm[i]].center;
+      t_sum += (w[i] / w_total) * (dst[i].center - R * src[perm[i]].center);
     }
-    const Eigen::Vector3f t = t_sum / static_cast<float>(N);
+    const Eigen::Vector3f t = t_sum;
 
-    // Residual: center L2 + (1 - |cos(normal angle)|)
+    // Residual: weighted center L2 + (1 - |cos(normal angle)|)
     double res = 0.0;
     for (int i = 0; i < N; ++i) {
+      const float wi = w[i] / w_total;
       const Eigen::Vector3f c_t = R * src[perm[i]].center + t;
-      res += static_cast<double>((c_t - dst[i].center).norm());
+      res += static_cast<double>(wi * (c_t - dst[i].center).norm());
       const Eigen::Vector3f n_t = R * src[perm[i]].normal;
       const float cos_ang = std::max(-1.0f, std::min(1.0f, n_t.dot(dst[i].normal)));
-      res += static_cast<double>(1.0f - std::abs(cos_ang));
+      res += static_cast<double>(wi * (1.0f - std::abs(cos_ang)));
     }
 
     if (res < best_residual) {
@@ -1183,15 +1272,16 @@ void LidarCalibrationNode::srvPlaneCalibrate(
   std::vector<PanelTarget> use2(panels2.begin(), panels2.begin() + static_cast<int>(n));
 
   // 법선 다양성 검사: 법선이 모두 평행하면 yaw 이외의 회전 underdetermined
+  float normal_span = 0.0f;
   if (n >= 3) {
     const Eigen::Vector3f v1 = use1[1].normal - use1[0].normal;
     const Eigen::Vector3f v2 = use1[2].normal - use1[0].normal;
-    const float span = v1.cross(v2).norm();
-    RCLCPP_INFO(get_logger(), "  [LiDAR1] 법선 다양성 (cross norm): %.3f", span);
-    if (span < 0.05f) {
+    normal_span = v1.cross(v2).norm();
+    RCLCPP_INFO(get_logger(), "  [LiDAR1] 법선 다양성 (cross norm): %.3f", normal_span);
+    if (normal_span < 0.05f) {
       RCLCPP_WARN(get_logger(),
         "  ⚠ 패널 법선이 거의 동일 (span=%.3f) — 회전 추정 불안정."
-        " 패널 각도를 다양하게 배치하세요.", span);
+        " 패널 각도를 다양하게 배치하세요.", normal_span);
     }
   }
 
@@ -1211,6 +1301,16 @@ void LidarCalibrationNode::srvPlaneCalibrate(
     kx, ky, kz, kyaw, residual);
   RCLCPP_INFO(get_logger(),
     "  [SVD 타당성] roll=%.3f pitch=%.3f rad", kr, kp);
+
+  // 법선 다양성 부족(face-on): H 행렬 rank-1 → SVD가 매 실행마다 임의 yaw 반환
+  // → normal_span 기준으로 일관되게 yaw=0 강제 (지상차량 전제: yaw 오정렬 ≈ 0)
+  // roll/pitch 값만으로 감지하면 퇴화임에도 pitch≈0인 경우를 놓칠 수 있음
+  if (normal_span < 0.05f || std::abs(kr) > 0.05 || std::abs(kp) > 0.05) {
+    RCLCPP_WARN(get_logger(),
+      "  [SVD 퇴화] span=%.3f roll=%.3f pitch=%.3f rad — 법선 다양성 부족: yaw=0 강제 적용",
+      normal_span, kr, kp);
+    kyaw = 0.0;
+  }
 
   // 지상차량 구속: roll·pitch=0, yaw만 남긴 R로 t 재계산
   Eigen::Matrix4f result_T = svd_T;
@@ -1239,6 +1339,43 @@ void LidarCalibrationNode::srvPlaneCalibrate(
       "  [지상구속] 적용: x=%.3f y=%.3f z=%.3f yaw=%.4f rad"
       "  (SVD z=%.3f → Δ=%.3f m)",
       gx, gy, gz, gyaw2, kz, gz - kz);
+  }
+
+  // ICP 정제: SVD 결과(~cm 정확도)를 초기값으로 사용해 mm 단위 수렴
+  // face-on 배치(normal_span<0.05) 시 ICP는 z 방향 구속이 없어 z 결과 악화 → 건너뜀
+  if (normal_span >= 0.05f) {
+    Eigen::Matrix4f coarse_T, fine_T;
+    double coarse_score, fine_score;
+    if (runICP(r2, r1, result_T, coarse_T, coarse_score, 0.30)) {
+      const bool fine_ok = runICP(r2, r1, coarse_T, fine_T, fine_score, 0.08);
+      const Eigen::Matrix4f & icp_T = fine_ok ? fine_T : coarse_T;
+      double ix, iy, iz, ir, ip, iyaw;
+      matrixToRpy(icp_T, ix, iy, iz, ir, ip, iyaw);
+      // z 구속: 패널 중심 간 z 차분으로 덮어쓰기 (ICP z는 면법선 방향 미구속)
+      double iz_panel = 0.0;
+      for (size_t i = 0; i < n; ++i) {
+        iz_panel += use1[i].center.z()
+                    - use2[static_cast<size_t>(best_perm[i])].center.z();
+      }
+      iz_panel /= static_cast<double>(n);
+      RCLCPP_INFO(get_logger(),
+        "  [ICP 정제] x=%.4f y=%.4f z=%.4f→%.4f yaw=%.4f rad  score=%.5f",
+        ix, iy, iz, iz_panel, iyaw, fine_ok ? fine_score : coarse_score);
+      // 지상구속: roll·pitch=0, z는 패널 중심 기반 값
+      const float icy = std::cos(static_cast<float>(iyaw));
+      const float isy = std::sin(static_cast<float>(iyaw));
+      result_T = Eigen::Matrix4f::Identity();
+      result_T(0,0) =  icy;  result_T(0,1) = -isy;
+      result_T(1,0) =  isy;  result_T(1,1) =  icy;
+      result_T(0,3) = static_cast<float>(ix);
+      result_T(1,3) = static_cast<float>(iy);
+      result_T(2,3) = static_cast<float>(iz_panel);
+    } else {
+      RCLCPP_WARN(get_logger(), "  [ICP 정제] coarse ICP 실패 — SVD 결과 유지");
+    }
+  } else {
+    RCLCPP_WARN(get_logger(),
+      "  [ICP 정제] face-on 배치 감지 (span=%.3f < 0.05) — 지상구속 결과 유지", normal_span);
   }
 
   // 각 패널 쌍의 중심 잔차 계산 (현재 result_T 기준)

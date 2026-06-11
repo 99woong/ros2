@@ -25,6 +25,7 @@
 
 #include <Eigen/Geometry>
 #include <algorithm>
+#include <atomic>
 #include <mutex>
 #include <string>
 #include <memory>
@@ -224,6 +225,14 @@ private:
   // ── ROS2 interfaces ───────────────────────────────────────────────────────
   message_filters::Subscriber<sensor_msgs::msg::PointCloud2> sub1_, sub2_;
   std::shared_ptr<message_filters::Synchronizer<SyncPolicy>> sync_;
+
+  // 개별 토픽 수신 진단용 (sync 이상 여부 파악)
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr raw_sub1_diag_;
+  rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr raw_sub2_diag_;
+  rclcpp::TimerBase::SharedPtr diag_timer_;
+  std::atomic<uint64_t> raw_count1_{0};
+  std::atomic<uint64_t> raw_count2_{0};
+  std::atomic<uint64_t> sync_cb_count_{0};
 
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_aligned_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_merged_;
