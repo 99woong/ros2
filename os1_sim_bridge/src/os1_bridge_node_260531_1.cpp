@@ -247,46 +247,13 @@ private:
             return;
         }
 
-        // 실제 OS1-32와 동일한 포맷으로 재구성
-        // col 순서(=시간 단조증가) 순회, 유효 포인트만 추출
-        // 실제 OS1-32: height=1, is_dense=true, 유효 포인트만 포함
-        sensor_msgs::msg::PointCloud2 sorted;
-        sorted.header       = out->header;
-        sorted.fields       = out->fields;
-        sorted.point_step   = POINT_STEP;
-        sorted.is_bigendian = false;
-        sorted.is_dense     = true;   // 실제 OS1-32와 동일
-        sorted.height       = 1;      // 실제 OS1-32와 동일
-        sorted.data.reserve(written * POINT_STEP);
-
-        // col 우선 순회: azimuth 0° → 360° = t 0 → 100ms 단조 증가
-        for (uint32_t col = 0; col < N_COLS; ++col)
-        {
-            for (uint32_t ring = 0; ring < N_RINGS; ++ring)
-            {
-                const size_t idx = (ring * N_COLS + col) * POINT_STEP;
-
-                // range==0 이면 빈 셀 → 스킵
-                uint32_t r = 0;
-                std::memcpy(&r, out->data.data() + idx + OFF_RANGE, 4);
-                if (r == 0) continue;
-
-                sorted.data.insert(sorted.data.end(),
-                    out->data.data() + idx,
-                    out->data.data() + idx + POINT_STEP);
-            }
-        }
-
-        sorted.width    = sorted.data.size() / POINT_STEP;
-        sorted.row_step = sorted.width * POINT_STEP;
-
-        pub_->publish(sorted);
+        pub_->publish(*out);
 
         if (++msg_count_ % 10 == 1) 
         {
             RCLCPP_INFO(get_logger(),
-                "[#%u] in=%u pts -> written=%u (%.1f%%) skip=%u",
-                msg_count_, n, written,
+                "[#%u] in=%u pts -> %u/%u cells (%.1f%%) skip=%u",
+                msg_count_, n, written, N_RINGS * N_COLS,
                 written * 100.f / (N_RINGS * N_COLS), skipped);
         }
     }
