@@ -1,0 +1,15 @@
+float64 map_x
+float64 map_y
+float64 map_heading
+float64 datum_lat
+float64 datum_lon
+float64 datum_yaw
+---
+bool    success
+float64 map_x
+float64 map_y
+float64 map_heading
+float64 datum_lat
+float64 datum_lon
+float64 datum_yaw
+string  message
