@@ -1119,9 +1119,10 @@ Eigen::Matrix4f LidarCalibrationNode::solvePlanesToPlanes(
     if (w_total <= 0.0f) w_total = static_cast<float>(N);
 
     // Step 1: weighted Kabsch SVD on unit normals → rotation
+    // H = Σ w_i * src_i * dst_i^T  →  R = V U^T  s.t. R * src ≈ dst
     Eigen::Matrix3f H = Eigen::Matrix3f::Zero();
     for (int i = 0; i < N; ++i) {
-      H += (w[i] / w_total) * (dst[i].normal * src[perm[i]].normal.transpose());
+      H += (w[i] / w_total) * (src[perm[i]].normal * dst[i].normal.transpose());
     }
 
     Eigen::JacobiSVD<Eigen::Matrix3f> svd(H, Eigen::ComputeFullU | Eigen::ComputeFullV);
@@ -1321,14 +1322,37 @@ void LidarCalibrationNode::srvPlaneCalibrate(
     R_yaw(0, 0) =  cy;  R_yaw(0, 1) = -sy;
     R_yaw(1, 0) =  sy;  R_yaw(1, 1) =  cy;
 
+    // face-on 패널만 translation에 사용
+    // 기울어진 패널(yaw 회전)은 bbox y 엣지가 L1/L2에서 다른 각도로 샘플링되어
+    // y 방향 bbox 중심에 ~30mm 편향이 생김 → x/y 오차 유발
     Eigen::Vector3f t_sum = Eigen::Vector3f::Zero();
+    int t_count = 0;
     for (size_t i = 0; i < n; ++i) {
-      const size_t j = static_cast<size_t>(best_perm[i]);
-      Eigen::Vector4f sp(use2[j].center.x(), use2[j].center.y(),
-                         use2[j].center.z(), 1.0f);
-      t_sum += use1[i].center - (R_yaw * sp).head<3>();
+      if (std::abs(use1[i].normal.x()) < 0.30f &&
+          std::abs(use1[i].normal.z()) < 0.30f) {
+        const size_t j = static_cast<size_t>(best_perm[i]);
+        Eigen::Vector4f sp(use2[j].center.x(), use2[j].center.y(),
+                           use2[j].center.z(), 1.0f);
+        t_sum += use1[i].center - (R_yaw * sp).head<3>();
+        ++t_count;
+      }
     }
-    const Eigen::Vector3f t_mean = t_sum / static_cast<float>(n);
+    if (t_count == 0) {
+      // face-on 패널이 없으면 전체 사용 (fallback)
+      RCLCPP_WARN(get_logger(),
+        "  [지상구속] face-on 패널 없음 — 전체 패널로 t 계산 (y 편향 가능)");
+      for (size_t i = 0; i < n; ++i) {
+        const size_t j = static_cast<size_t>(best_perm[i]);
+        Eigen::Vector4f sp(use2[j].center.x(), use2[j].center.y(),
+                           use2[j].center.z(), 1.0f);
+        t_sum += use1[i].center - (R_yaw * sp).head<3>();
+      }
+      t_count = static_cast<int>(n);
+    } else {
+      RCLCPP_INFO(get_logger(),
+        "  [지상구속] face-on 패널 %d/%zu 개로 t 계산", t_count, n);
+    }
+    const Eigen::Vector3f t_mean = t_sum / static_cast<float>(t_count);
 
     result_T = R_yaw;
     result_T.block<3, 1>(0, 3) = t_mean;
@@ -1341,41 +1365,74 @@ void LidarCalibrationNode::srvPlaneCalibrate(
       gx, gy, gz, gyaw2, kz, gz - kz);
   }
 
-  // ICP 정제: SVD 결과(~cm 정확도)를 초기값으로 사용해 mm 단위 수렴
-  // face-on 배치(normal_span<0.05) 시 ICP는 z 방향 구속이 없어 z 결과 악화 → 건너뜀
+  // 기울어진 패널(normal_span ≥ 0.05): ICP 정제 후 z를 패널 중심 z 차분으로 덮어씀
+  // face-on(normal_span < 0.05): ICP 건너뜀 — z 자유도 미구속으로 오히려 악화
   if (normal_span >= 0.05f) {
+    CloudPtr c1_vox = std::make_shared<Cloud>();
+    CloudPtr c2_vox = std::make_shared<Cloud>();
+    {
+      pcl::VoxelGrid<PointT> vg;
+      const float leaf = static_cast<float>(voxel_size_);
+      vg.setLeafSize(leaf, leaf, leaf);
+      vg.setInputCloud(r1);  vg.filter(*c1_vox);
+      vg.setInputCloud(r2);  vg.filter(*c2_vox);
+    }
+    RCLCPP_INFO(get_logger(),
+      "ICP 정제 시작 (normal_span=%.3f ≥ 0.05  c1=%zu pts  c2=%zu pts)...",
+      normal_span, c1_vox->size(), c2_vox->size());
+
     Eigen::Matrix4f coarse_T, fine_T;
     double coarse_score, fine_score;
-    if (runICP(r2, r1, result_T, coarse_T, coarse_score, 0.30)) {
-      const bool fine_ok = runICP(r2, r1, coarse_T, fine_T, fine_score, 0.08);
-      const Eigen::Matrix4f & icp_T = fine_ok ? fine_T : coarse_T;
-      double ix, iy, iz, ir, ip, iyaw;
-      matrixToRpy(icp_T, ix, iy, iz, ir, ip, iyaw);
-      // z 구속: 패널 중심 간 z 차분으로 덮어쓰기 (ICP z는 면법선 방향 미구속)
-      double iz_panel = 0.0;
-      for (size_t i = 0; i < n; ++i) {
-        iz_panel += use1[i].center.z()
-                    - use2[static_cast<size_t>(best_perm[i])].center.z();
+
+    if (runICP(c2_vox, c1_vox, result_T, coarse_T, coarse_score, search_corr_dist_)) {
+      RCLCPP_INFO(get_logger(), "  coarse ICP score=%.4f", coarse_score);
+      if (!runICP(c2_vox, c1_vox, coarse_T, fine_T, fine_score, refine_corr_dist_)) {
+        fine_T     = coarse_T;
+        fine_score = coarse_score;
       }
-      iz_panel /= static_cast<double>(n);
+      RCLCPP_INFO(get_logger(), "  fine   ICP score=%.4f", fine_score);
+
+      const float drift_limit = 0.30f;
+      const Eigen::Vector3f t_init = result_T.block<3, 1>(0, 3);
+      const Eigen::Vector3f t_fine = fine_T.block<3, 1>(0, 3);
+      const float drift = (t_fine - t_init).norm();
       RCLCPP_INFO(get_logger(),
-        "  [ICP 정제] x=%.4f y=%.4f z=%.4f→%.4f yaw=%.4f rad  score=%.5f",
-        ix, iy, iz, iz_panel, iyaw, fine_ok ? fine_score : coarse_score);
-      // 지상구속: roll·pitch=0, z는 패널 중심 기반 값
-      const float icy = std::cos(static_cast<float>(iyaw));
-      const float isy = std::sin(static_cast<float>(iyaw));
-      result_T = Eigen::Matrix4f::Identity();
-      result_T(0,0) =  icy;  result_T(0,1) = -isy;
-      result_T(1,0) =  isy;  result_T(1,1) =  icy;
-      result_T(0,3) = static_cast<float>(ix);
-      result_T(1,3) = static_cast<float>(iy);
-      result_T(2,3) = static_cast<float>(iz_panel);
+        "  [drift] init=(%.4f,%.4f,%.4f)  fine=(%.4f,%.4f,%.4f)  이동=%.4f m",
+        t_init.x(), t_init.y(), t_init.z(),
+        t_fine.x(), t_fine.y(), t_fine.z(), drift);
+
+      if (drift <= drift_limit) {
+        result_T = fine_T;
+        RCLCPP_INFO(get_logger(), "  ICP 정제 적용 (drift=%.4f m)", drift);
+      } else {
+        RCLCPP_WARN(get_logger(),
+          "  ★ ICP drift=%.3f m > %.3f m — 잘못된 면 대응 추정 → 지상구속 결과 유지",
+          drift, drift_limit);
+      }
     } else {
-      RCLCPP_WARN(get_logger(), "  [ICP 정제] coarse ICP 실패 — SVD 결과 유지");
+      RCLCPP_WARN(get_logger(), "  ICP coarse 수렴 실패 → 지상구속 결과 유지");
+    }
+
+    // z override: ICP의 z는 face-on 구성 패널에 의해 미구속될 수 있음
+    //             패널 중심 간 z 차분 평균이 더 신뢰도 높음
+    {
+      const Eigen::Matrix3f & R_f = result_T.block<3, 3>(0, 0);
+      float z_sum = 0.0f;
+      for (size_t i = 0; i < n; ++i) {
+        const size_t j = static_cast<size_t>(best_perm[i]);
+        z_sum += use1[i].center.z() - (R_f * use2[j].center).z();
+      }
+      const float z_panel = z_sum / static_cast<float>(n);
+      RCLCPP_INFO(get_logger(),
+        "  [z override] ICP_z=%.4f m → 패널중심 z=%.4f m  (Δ=%.4f m)",
+        static_cast<double>(result_T(2, 3)),
+        static_cast<double>(z_panel),
+        static_cast<double>(z_panel - result_T(2, 3)));
+      result_T(2, 3) = z_panel;
     }
   } else {
-    RCLCPP_WARN(get_logger(),
-      "  [ICP 정제] face-on 배치 감지 (span=%.3f < 0.05) — 지상구속 결과 유지", normal_span);
+    RCLCPP_INFO(get_logger(),
+      "ICP 정제 건너뜀 (normal_span=%.3f < 0.05 — face-on 배치, z 미구속).", normal_span);
   }
 
   // 각 패널 쌍의 중심 잔차 계산 (현재 result_T 기준)
