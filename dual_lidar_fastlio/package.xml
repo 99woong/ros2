@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>dual_lidar_fastlio</name>
+  <version>0.0.1</version>
+  <description>Launch two OS1-32 sensors with independent FAST-LIO2 instances</description>
+  <maintainer email="jcw561@zenixrobotics.com">zenix</maintainer>
+  <license>MIT</license>
+
+  <exec_depend>ouster_ros</exec_depend>
+  <exec_depend>fast_lio</exec_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

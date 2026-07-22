@@ -1,0 +1,10 @@
+# 각 컴포넌트 활성화 여부 (true / false)
+# 런치 시 CLI 인자로 개별 override 가능
+# 예) ros2 launch dual_lidar_fastlio dual_fastlio.launch.py fast_lio_1:=false
+
+ouster_1:        false   # Ouster 드라이버 1 (192.168.10.11)
+ouster_2:        false   # Ouster 드라이버 2 (192.168.20.11)
+fast_lio_1:      true   # FAST-LIO2 인스턴스 1
+fast_lio_2:      false   # FAST-LIO2 인스턴스 2
+fast_lio_1_rviz: true   # RViz2 (FAST-LIO2 인스턴스 1)
+fast_lio_2_rviz: false   # RViz2 (FAST-LIO2 인스턴스 2)
